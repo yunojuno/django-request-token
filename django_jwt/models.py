@@ -22,6 +22,27 @@ def to_seconds(timestamp):
         return None
 
 
+class RequestTokenQuerySet(models.query.QuerySet):
+
+    """Custom QuerySet for RquestToken objects."""
+
+    def decode(self, encoded):
+        """Decodes and verifies a JWT into a RequestToken.
+
+        This method decodes the JWT, verifies it, and extracts the
+        'jti' claim, from which it fetches the relevant RequestToken
+        object. Raises DoesNotExist error if it can't be found.
+
+        Args:
+            encoded: string, the 3-part 'headers.payload.signature' encoded JWT.
+
+        Returns the matching RequestToken object.
+
+        """
+        headers, payload, signature = jwt.decode(encoded, secret=settings.SECRET_KEY)
+        return self.get(id=payload['jti'])
+
+
 class RequestToken(models.Model):
 
     """A JWT token, targeted for use by a known Django User.
@@ -43,10 +64,14 @@ class RequestToken(models.Model):
     JWT spec: https://tools.ietf.org/html/rfc7519
 
     """
-    audience = models.ForeignKey(
+    recipient = models.ForeignKey(
         User,
         blank=True, null=True,
         help_text="Intended recipient of the JWT."
+    )
+    target_url = models.CharField(
+        blank=True,
+        help_text="The target endpoint."
     )
     expiration_time = models.DateTimeField(
         blank=True, null=True,
@@ -66,6 +91,8 @@ class RequestToken(models.Model):
         help_text="Time the token was created, set in the initial save."
     )
 
+    objects = RequestTokenQuerySet.as_manager()
+
     def save(self, *args, **kwargs):
         if 'update_fields' not in kwargs:
             self.issued_at = self.issued_at or tz_now()
@@ -80,7 +107,10 @@ class RequestToken(models.Model):
     @property
     def aud(self):
         """Audience claim."""
-        return self.audience.username
+        if self.recipient is None:
+            return None
+        else:
+            return self.recipient.username
 
     @property
     def exp(self):
@@ -134,3 +164,60 @@ class RequestToken(models.Model):
         assert self.id is not None, ("RequestToken missing `id` - ensure that "
             "the token is saved before calling the `encode` method.")
         return jwt.encode(self.payload, settings.SECRET_KEY)
+
+    def validate_request(self, request):
+        """Validate a request against the token object.
+
+        Sets the request.user object to the token.recipient _if_ all
+        validation passes, else raises InvalidTokenError.
+
+        NB This does **not** verify the JWT signature - this must be done
+        elsewhere.
+
+        Args:
+            request: HttpRequest object to validate.
+
+        """
+        # check that target_url matches the current request
+        if self.target_url is not None and self.target_url != request.path:
+            raise InvalidTokenError("JWT url mismatch")
+        if self.audience is not None:
+            # check that request user (if authenticated) matches
+            if request.user.is_authenticated():
+                if request.user.username != self.aud:
+                    return InvalidTokenError("JWT audience mismatch")
+        if self.used_to_date >= self.max_uses:
+            raise InvalidTokenError("JWT has exceeded max uses")
+        request.token = self
+        request.user = self.recipient
+
+    def log_usage(self, request, response, duration):
+        """Record the use of a token.
+
+        This is used by the decorator to log each time someone uses the token,
+        or tries to. Used for reporting, diagnostics.
+
+        Args:
+            request: the HttpRequest object that used the token, from which the
+                user, ip and user-agenct are extracted.
+            response: the corresponding HttpResponse object, from which the status
+                code is extracted.
+            duration: float, the duration of the view function in ms - just because
+                you can never measure too many things.
+        
+        Returns a RequestTokenUse object.
+
+        """
+        meta = request.META
+        ff = meta.get('HTTP_X_FORWARDED_FOR', None)
+        ra = meta.get('REMOTE_ADDR', 'unknown')
+        rtu = RequestTokenUse(
+            token=self,
+            user=request.user,
+            user_agent=meta.get('HTTP_USER_AGENT', 'unknown'),
+            source_ip=ff or ra
+        )
+        rtu.save()
+        self.uses += 1
+        self.save()
+        return rtu
