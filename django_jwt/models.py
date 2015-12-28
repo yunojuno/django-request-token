@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """django_jwt models."""
 import calendar
+import datetime
 import json
 
 from django.conf import settings
@@ -95,6 +96,10 @@ class RequestTokenQuerySet(models.query.QuerySet):
         """
         return self.get(id=extract_claim(encoded, 'jti'))
 
+    def create_token(self, target_url, **kwargs):
+        """Create a new RequestToken, setting the target_url."""
+        return RequestToken(target_url=target_url, **kwargs).save()
+
 
 class RequestToken(models.Model):
 
@@ -117,7 +122,6 @@ class RequestToken(models.Model):
     JWT spec: https://tools.ietf.org/html/rfc7519
 
     """
-
     user = models.ForeignKey(
         User,
         blank=True, null=True,
@@ -129,11 +133,11 @@ class RequestToken(models.Model):
     )
     expiration_time = models.DateTimeField(
         blank=True, null=True,
-        help_text="DateTime at which this token expires."
+        help_text="Token will expire at this time (raises ExpiredSignatureError)."
     )
     not_before_time = models.DateTimeField(
         blank=True, null=True,
-        help_text="DateTime before which this token is invalid."
+        help_text="Token cannot be used before this time (raises ImmatureSignatureError)."
     )
     data = models.TextField(
         max_length=1000,
@@ -143,15 +147,15 @@ class RequestToken(models.Model):
     )
     issued_at = models.DateTimeField(
         blank=True, null=True,
-        help_text="Time the token was created, set in the initial save."
+        help_text="Time the token was created (set in the initial save)."
     )
     max_uses = models.IntegerField(
         default=1,
-        help_text="Cap on the number of times the token can be used, defaults to 1 (single use)."
+        help_text="The maximum number of times the token can be used."
     )
     used_to_date = models.IntegerField(
         default=0,
-        help_text="Denormalised count of the number times the token has been used."
+        help_text="Number times the token has been used to date (raises MaxUseError)."
     )
 
     objects = RequestTokenQuerySet.as_manager()
@@ -242,9 +246,9 @@ class RequestToken(models.Model):
 
         """
         now = tz_now()
-        if self.not_before_time and now < self.not_before_time:
+        if now < (self.not_before_time or datetime.datetime.min):
             raise ImmatureSignatureError()
-        if self.expiration_time and now > self.expiration_time:
+        if now > (self.expiration_time or datetime.datetime.max):
             raise ExpiredSignatureError()
 
     def _validate_max_uses(self):

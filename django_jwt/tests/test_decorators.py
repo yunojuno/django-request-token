@@ -18,12 +18,6 @@ def test_view_func(request):
     return HttpResponse("Hello, world!")
 
 
-@use_jwt
-def test_view_func_with_errors(request, *args, **kwargs):
-    """Return HttpResponse object - request should be decorated with appropriate values."""
-    return HttpResponse("Hello, world!")
-
-
 class DecoratorTests(TransactionTestCase):
 
     """use_jwt decorator tests."""

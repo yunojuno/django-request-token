@@ -271,6 +271,10 @@ class RequestTokenQuerySetTests(TransactionTestCase):
         encoded = token.encode()
         self.assertEqual(RequestToken.objects.get_from_jwt(encoded), token)
 
+    def test_create_token(self):
+        self.assertRaises(TypeError, RequestToken.objects.create_token)
+        token = RequestToken.objects.create_token(target_url="/")
+        self.assertEqual(RequestToken.objects.get().target_url, '/')
 
 class RequestTokenLogTests(TransactionTestCase):
 

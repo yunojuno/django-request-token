@@ -1,7 +1,7 @@
-django_jwt
-----------
+django_jwt_expiringlinks
+------------------------
 
-Django app that uses JWT to support access to restricted URLs.
+Django app that uses JWT to manage one-time and expiring links to protected URLs.
 
 Use Case
 ========
@@ -27,13 +27,6 @@ assumptions built-in:
 * The token will *not* log the user in
 * The link is not sensitive, and contains no sensitive data
 
-As a real-world example, at YunoJuno we run a 'member-get-member' scheme. A
-registered user can send out invitations to friends / colleagues to join. Each
-invitation has a custom link, which is restricted to just one person. We can
-use a tokenised URL to the public 'sign-up' form to enforce this. (NB in this
-case we pre-generate the User object based on the information given to us, so
-although the recipient has never registered, we know about them.)
-
 Implementation
 ==============
 
@@ -48,41 +41,35 @@ then call the ``encode`` method on it. This will return the 3-part signed JWT
 recipient ``User``, and the target URL - to ensure that the token is only used
 to access the intended endpoint.
 
-..code ::python
+.. code:: python
 
     >>> from django_jwt.models import RequestToken
     >>> # create a new RequestToken, and encode the contents
-    >>> token = RequestToken.objects.create(
-            audience=User.objects.filter(...),
-            target_url=reverse('foobar')
-        ).encode()
-
+    >>> token = RequestToken.objects.create_token(
+    ...     user=User.objects.filter(...),
+    ...     target_url=reverse('foobar')
+    ... ).encode()
+    >>> token
     1234567.qwertyuiop.zxcvbnm
     >>>
 
 You now have a token that is bound to a taget URL, and an intended recipient.
-If a user (any user - remmember, we are *not* authenticating the end user) clicks on this URL, they will hit the endpoint as an unauthenticated user. If the URL requires authentication, the request will fail, as the user is not yet authenticated. In order to use the JWT instead of full authentication, we must add a decorator to the view function to expand out the token, verify it (against tampering, and in line with the "not before time" and "expiration time" attributes of the token payload) and then set the user.
+If a user (any user - remmember, we are *not* authenticating the end user) clicks on this URL, they will hit the endpoint as an unauthenticated user. If the URL requires authentication, the request will fail, as the user is not yet authenticated.
 
-.. code::python
+.. code:: python
 
-    @user_passes_test(u.is_authenticated)
+    # this will fail with a 403 as the request.user is not authenticated
+    @login_required
     def my_view(request):
         logging.debug("View is not executed")
 
-    @verify_token
-    @user_passes_test(u.is_authenticated):
+In order to use the JWT instead of full authentication, we must add a decorator to the view function to expand out the token, verify it (against tampering, and in line with the "not before time" and "expiration time" attributes of the token payload) and then set the user.
+
+.. code:: python
+
+    @use_jwt
+    @login_required
+    def my_view(request):
         logging.debug("View is executed")
 
-The ``verify_token`` function decorator is responsible for expanding the token according to the following rules:
-
-1. Extract the token from the querystring if it exists
-2. Verify the token matches the signature
-3. Validate the token ``target_url`` matches the current ``request.path``
-4. If the request is already authenticated, check that the request user and the token user match
-5. If the token has a ``max_uses`` attribute, check that it hasn't been used too many times already
-6. If all the above pass, then set the request.user to the token.user
-
-At this point, we have set the ``request.user`` property, and so the request now resembles an authenticated request - and should pass any other relevant decorators.
-
 The decorator does one more important task, once the function has run - it records the use of the token - extracting the source IP and user-agent from the request (for auditing purposes), and updating the token ``use_count`` property, along with the response status_code - this enables fine-grained reporting on the use of the tokens.
-
