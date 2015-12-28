@@ -1,17 +1,41 @@
 # -*- coding: utf-8 -*-
 """django_jwt models."""
 import calendar
-import datetime
+import json
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
-from django.db import models
+from django.db import models, transaction
 from django.utils.timezone import now as tz_now
 
 import jwt
+from jwt.exceptions import (
+    InvalidAudienceError,
+    # DecodeError,
+    ExpiredSignatureError,
+    ImmatureSignatureError,
+    # InvalidTokenError,
+    MissingRequiredClaimError
+)
 
+from django_jwt.exceptions import MaxUseError, TargetUrlError
+
+# list of the formal, 'registered' claims
 REGISTERED_CLAIMS = ('iss', 'aud', 'exp', 'nbf', 'iat', 'jti')
+
+# the default decoding is to verify the signature only
+DEFAULT_DECODE_OPTIONS = {
+    'verify_signature': True,
+    'verify_exp': False,
+    'verify_nbf': False,
+    'verify_iat': False,
+    'verify_aud': False,
+    'verify_iss': False,
+    'require_exp': False,
+    'require_iat': False,
+    'require_nbf': False
+}
 
 
 def to_seconds(timestamp):
@@ -22,16 +46,46 @@ def to_seconds(timestamp):
         return None
 
 
+def decode(encoded, options=DEFAULT_DECODE_OPTIONS):
+    """Decode JWT and verify the signature.
+
+    Returns the decoded payload.
+
+    """
+    return jwt.decode(encoded, settings.SECRET_KEY, options=DEFAULT_DECODE_OPTIONS)
+
+
+def extract_claim(encoded, claim):
+    """Decode and verify JWT, and extract a single claim.
+
+    This function will decode the JWT, verifying the signature only.
+
+    Returns the value of the claim, raises MissingRequiredClaimError if
+    the claim does not exist.
+
+    """
+    decoded = decode(encoded)
+    try:
+        return decoded[claim]
+    except KeyError:
+        raise MissingRequiredClaimError(claim)
+
+
 class RequestTokenQuerySet(models.query.QuerySet):
 
     """Custom QuerySet for RquestToken objects."""
 
-    def decode(self, encoded):
-        """Decodes and verifies a JWT into a RequestToken.
+    def get_from_jwt(self, encoded):
+        """Decode and verify a JWT into a RequestToken.
 
         This method decodes the JWT, verifies it, and extracts the
         'jti' claim, from which it fetches the relevant RequestToken
         object. Raises DoesNotExist error if it can't be found.
+
+        NB It only verifies the signature - it does *not* verify the
+        exp and nbf claims as we want to return the RequestToken before
+        validating the token - so we only care that it is untampered,
+        and that it has a 'jti' value.
 
         Args:
             encoded: string, the 3-part 'headers.payload.signature' encoded JWT.
@@ -39,8 +93,7 @@ class RequestTokenQuerySet(models.query.QuerySet):
         Returns the matching RequestToken object.
 
         """
-        headers, payload, signature = jwt.decode(encoded, secret=settings.SECRET_KEY)
-        return self.get(id=payload['jti'])
+        return self.get(id=extract_claim(encoded, 'jti'))
 
 
 class RequestToken(models.Model):
@@ -64,31 +117,41 @@ class RequestToken(models.Model):
     JWT spec: https://tools.ietf.org/html/rfc7519
 
     """
-    recipient = models.ForeignKey(
+
+    user = models.ForeignKey(
         User,
         blank=True, null=True,
         help_text="Intended recipient of the JWT."
     )
     target_url = models.CharField(
-        blank=True,
+        max_length=200,
         help_text="The target endpoint."
     )
     expiration_time = models.DateTimeField(
         blank=True, null=True,
-        help_text="Time at which this token expires."
+        help_text="DateTime at which this token expires."
     )
     not_before_time = models.DateTimeField(
         blank=True, null=True,
-        help_text="Time before which this token is invalid."
+        help_text="DateTime before which this token is invalid."
     )
     data = models.TextField(
         max_length=1000,
         help_text="Custom data (JSON) added to the default payload.",
-        blank=True
+        blank=True,
+        default='{}'
     )
     issued_at = models.DateTimeField(
         blank=True, null=True,
         help_text="Time the token was created, set in the initial save."
+    )
+    max_uses = models.IntegerField(
+        default=1,
+        help_text="Cap on the number of times the token can be used, defaults to 1 (single use)."
+    )
+    used_to_date = models.IntegerField(
+        default=0,
+        help_text="Denormalised count of the number times the token has been used."
     )
 
     objects = RequestTokenQuerySet.as_manager()
@@ -107,10 +170,10 @@ class RequestToken(models.Model):
     @property
     def aud(self):
         """Audience claim."""
-        if self.recipient is None:
+        if self.user is None:
             return None
         else:
-            return self.recipient.username
+            return self.user.username
 
     @property
     def exp(self):
@@ -146,7 +209,7 @@ class RequestToken(models.Model):
     def payload(self):
         """The payload to be encoded."""
         claims = self.registered_claims
-        claims.update(self.data)
+        claims.update(json.loads(self.data))
         return claims
 
     def encode(self):
@@ -161,9 +224,37 @@ class RequestToken(models.Model):
         It is signed using the Django SECRET_KEY value.
 
         """
-        assert self.id is not None, ("RequestToken missing `id` - ensure that "
-            "the token is saved before calling the `encode` method.")
+        assert self.id is not None, (
+            "RequestToken missing `id` - ensure that "
+            "the token is saved before calling the `encode` method."
+        )
         return jwt.encode(self.payload, settings.SECRET_KEY)
+
+    def validate(self):
+        """Validate token expiry and max uses."""
+        self._validate_expiry()
+        self._validate_max_uses()
+
+    def _validate_expiry(self):
+        """Validate the not before and expiry dates.
+
+        Raises jwt ImmatureSignatureError or ExpiredSignatureError.
+
+        """
+        now = tz_now()
+        if self.not_before_time and now < self.not_before_time:
+            raise ImmatureSignatureError()
+        if self.expiration_time and now > self.expiration_time:
+            raise ExpiredSignatureError()
+
+    def _validate_max_uses(self):
+        """Check that we haven't exceeded the max_uses value.
+
+        Raise MaxUseError if we have overshot the value.
+
+        """
+        if self.used_to_date >= self.max_uses:
+            raise MaxUseError("JWT has exceeded max uses")
 
     def validate_request(self, request):
         """Validate a request against the token object.
@@ -178,20 +269,50 @@ class RequestToken(models.Model):
             request: HttpRequest object to validate.
 
         """
-        # check that target_url matches the current request
-        if self.target_url is not None and self.target_url != request.path:
-            raise InvalidTokenError("JWT url mismatch")
-        if self.audience is not None:
-            # check that request user (if authenticated) matches
-            if request.user.is_authenticated():
-                if request.user.username != self.aud:
-                    return InvalidTokenError("JWT audience mismatch")
-        if self.used_to_date >= self.max_uses:
-            raise InvalidTokenError("JWT has exceeded max uses")
+        self._validate_request_url(request)
+        self._validate_request_user(request)
         request.token = self
-        request.user = self.recipient
 
-    def log_usage(self, request, response, duration):
+    def _validate_request_url(self, request):
+        """Confirm that request.path and target_url match.
+
+        Raises TargetUrlError if they don't match.
+
+        """
+        # check that target_url matches the current request
+        if self.target_url in ('', None):
+            return
+        if self.target_url != request.path:
+            raise TargetUrlError("JWT url mismatch")
+
+    def _validate_request_user(self, request):
+        """Validate and set the request.user from object user.
+
+        If the object has a user set, then it must match the request.user,
+        and if it doesn't we raise an InvalidAudienceError.
+
+        """
+        assert hasattr(request, 'user'), (
+            "Request is missing user property. Please ensure that the Django "
+            "authentication middleware is installed."
+        )
+
+        if self.user is None:
+            return
+
+        # we have a token user set, and an anonymous user on the request,
+        # so replace that with the token user
+        if request.user.is_anonymous():
+            request.user = self.user
+            return
+
+        # we have an authenticated user that does *not* match the user
+        # we are expecting, so bomb out here.
+        if request.user != self.user:
+            raise InvalidAudienceError("JWT audience mismatch")
+
+    @transaction.atomic
+    def log(self, request, response):
         """Record the use of a token.
 
         This is used by the decorator to log each time someone uses the token,
@@ -204,20 +325,64 @@ class RequestToken(models.Model):
                 code is extracted.
             duration: float, the duration of the view function in ms - just because
                 you can never measure too many things.
-        
+
         Returns a RequestTokenUse object.
 
         """
-        meta = request.META
-        ff = meta.get('HTTP_X_FORWARDED_FOR', None)
-        ra = meta.get('REMOTE_ADDR', 'unknown')
-        rtu = RequestTokenUse(
-            token=self,
-            user=request.user,
-            user_agent=meta.get('HTTP_USER_AGENT', 'unknown'),
-            source_ip=ff or ra
+        assert hasattr(request, 'user'), (
+            "Request is missing user property. Please ensure that the Django "
+            "authentication middleware is installed."
         )
-        rtu.save()
-        self.uses += 1
+        meta = request.META
+        xff = meta.get('HTTP_X_FORWARDED_FOR', None)
+        client_ip = xff or meta.get('REMOTE_ADDR', 'unknown')
+        user = None if request.user.is_anonymous() else request.user
+        rtu = RequestTokenLog(
+            token=self,
+            user=user,
+            user_agent=meta.get('HTTP_USER_AGENT', 'unknown'),
+            client_ip=client_ip,
+            status_code=response.status_code
+        ).save()
+        # NB this could already be out-of-date
+        self.used_to_date = models.F('used_to_date') + 1
         self.save()
         return rtu
+
+
+class RequestTokenLog(models.Model):
+
+    """Used to log the use of a RequestToken."""
+
+    token = models.ForeignKey(
+        RequestToken,
+        help_text="The RequestToken that was used.",
+        db_index=True
+    )
+    user = models.ForeignKey(
+        User,
+        blank=True, null=True,
+        help_text="The user who made the request (None if anonymous)."
+    )
+    user_agent = models.TextField(
+        blank=True,
+        help_text="User-agent of client used to make the request."
+    )
+    client_ip = models.CharField(
+        max_length=15,
+        help_text="Client IP of device used to make the request."
+    )
+    status_code = models.IntegerField(
+        blank=True, null=True,
+        help_text="Response status code associated with this use of the token."
+    )
+    timestamp = models.DateTimeField(
+        blank=True,
+        help_text="Time the request was logged."
+    )
+
+    def save(self, *args, **kwargs):
+        if 'update_fields' not in kwargs:
+            self.timestamp = self.timestamp or tz_now()
+        super(RequestTokenLog, self).save(*args, **kwargs)
+        return self
