@@ -30,7 +30,8 @@ def use_jwt(view_func):
             return view_func(request, *args, **kwargs)
 
         try:
-            token, token_error = RequestToken.objects.get_from_jwt(jwt), None
+            jwt_decoded = decode(jwt)            
+            token, token_error = RequestToken.objects.get(id=jwt_decoded['jti']), None
             token.validate()
             token.validate_request(request)
         except DecodeError as ex:
