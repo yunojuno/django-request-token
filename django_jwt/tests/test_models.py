@@ -3,7 +3,7 @@
 import datetime
 import json
 
-from jwt import encode as jwt_encode, decode as jwt_decode
+from jwt import decode as jwt_decode
 from jwt.exceptions import (
     InvalidAudienceError,
     MissingRequiredClaimError,
@@ -22,15 +22,13 @@ from django.utils.timezone import now as tz_now
 from django_jwt.models import (
     RequestToken,
     RequestTokenLog,
-    REGISTERED_CLAIMS,
-    to_seconds,
-    decode,
-    extract_claim
+    DEFAULT_CLAIMS
 )
 from django_jwt.exceptions import (
     MaxUseError,
     TargetUrlError
 )
+from django_jwt.utils import encode, decode, to_seconds
 
 
 class FunctionTests(TransactionTestCase):
@@ -43,14 +41,9 @@ class FunctionTests(TransactionTestCase):
         self.assertEqual(to_seconds(1420070400), None)
 
     def test_decode(self):
-        encoded = jwt_encode({'foo': 'bar'}, settings.SECRET_KEY)
+        encoded = encode({'foo': 'bar'})
         self.assertEqual(decode(encoded), jwt_decode(encoded, settings.SECRET_KEY))
         self.assertEqual(decode(encoded), {'foo': 'bar'})
-
-    def test_extract_claim(self):
-        encoded = jwt_encode({'foo': 'bar'}, settings.SECRET_KEY)
-        self.assertEqual(extract_claim(encoded, 'foo'), 'bar')
-        self.assertRaises(MissingRequiredClaimError, extract_claim, encoded, 'baz')
 
 
 class RequestTokenTests(TransactionTestCase):
@@ -84,12 +77,12 @@ class RequestTokenTests(TransactionTestCase):
         self.assertEqual(token.used_to_date, 0)
 
     def test_registered_claims(self):
-        self.assertTrue('iss' in REGISTERED_CLAIMS)
-        self.assertTrue('aud' in REGISTERED_CLAIMS)
-        self.assertTrue('exp' in REGISTERED_CLAIMS)
-        self.assertTrue('nbf' in REGISTERED_CLAIMS)
-        self.assertTrue('iat' in REGISTERED_CLAIMS)
-        self.assertTrue('jti' in REGISTERED_CLAIMS)
+        self.assertTrue('iss' in DEFAULT_CLAIMS)
+        self.assertTrue('aud' in DEFAULT_CLAIMS)
+        self.assertTrue('exp' in DEFAULT_CLAIMS)
+        self.assertTrue('nbf' in DEFAULT_CLAIMS)
+        self.assertTrue('iat' in DEFAULT_CLAIMS)
+        self.assertTrue('jti' in DEFAULT_CLAIMS)
 
         token = RequestToken()
         site = Site.objects.get_current()

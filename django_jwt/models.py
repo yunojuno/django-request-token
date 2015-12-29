@@ -1,100 +1,94 @@
 # -*- coding: utf-8 -*-
 """django_jwt models."""
-import calendar
-import datetime
 import json
 
-from django.conf import settings
 from django.contrib.auth.models import User
-from django.contrib.sites.models import Site
+try:
+    from django.contrib.sites.models import Site
+    USE_SITE = True
+except ImportError:
+    USE_SITE = False
 from django.db import models, transaction
 from django.utils.timezone import now as tz_now
 
-import jwt
-from jwt.exceptions import (
-    InvalidAudienceError,
-    # DecodeError,
-    ExpiredSignatureError,
-    ImmatureSignatureError,
-    # InvalidTokenError,
-    MissingRequiredClaimError
-)
+from jwt.exceptions import InvalidAudienceError
 
 from django_jwt.exceptions import MaxUseError, TargetUrlError
+from django_jwt.utils import to_seconds, encode
 
-# list of the formal, 'registered' claims
-REGISTERED_CLAIMS = ('iss', 'aud', 'exp', 'nbf', 'iat', 'jti')
+# list of the default claims that will be included in each JWT
+DEFAULT_CLAIMS = ('iss', 'aud', 'exp', 'nbf', 'iat', 'jti', 'max')
 
-# the default decoding is to verify the signature only
-DEFAULT_DECODE_OPTIONS = {
-    'verify_signature': True,
-    'verify_exp': False,
-    'verify_nbf': False,
-    'verify_iat': False,
-    'verify_aud': False,
-    'verify_iss': False,
-    'require_exp': False,
-    'require_iat': False,
-    'require_nbf': False
-}
-
-
-def to_seconds(timestamp):
-    """Convert timestamp into integers since epoch."""
-    try:
-        return calendar.timegm(timestamp.utctimetuple())
-    except:
-        return None
+# # the default decoding is to verify the signature only
+# DEFAULT_DECODE_OPTIONS = {
+#     'verify_signature': True,
+#     'verify_exp': False,
+#     'verify_nbf': False,
+#     'verify_iat': False,
+#     'verify_aud': False,
+#     'verify_iss': False,
+#     'require_exp': False,
+#     'require_iat': False,
+#     'require_nbf': False
+# }
 
 
-def decode(encoded, options=DEFAULT_DECODE_OPTIONS):
-    """Decode JWT and verify the signature.
+# def to_seconds(timestamp):
+#     """Convert timestamp into integers since epoch."""
+#     try:
+#         return calendar.timegm(timestamp.utctimetuple())
+#     except:
+#         return None
 
-    Returns the decoded payload.
 
-    """
-    return jwt.decode(encoded, settings.SECRET_KEY, options=DEFAULT_DECODE_OPTIONS)
+# def decode(encoded, options=DEFAULT_DECODE_OPTIONS):
+#     """Decode JWT and verify the signature.
+
+#     Returns the decoded payload.
+
+#     """
+#     return jwt.decode(encoded, settings.SECRET_KEY, options=DEFAULT_DECODE_OPTIONS)
 
 
-def extract_claim(encoded, claim):
-    """Decode and verify JWT, and extract a single claim.
+# def extract_claim(encoded, claim):
+#     """Decode and verify JWT, and extract a single claim.
 
-    This function will decode the JWT, verifying the signature only.
+#     This function will decode the JWT, verifying the signature only.
 
-    Returns the value of the claim, raises MissingRequiredClaimError if
-    the claim does not exist.
+#     Returns the value of the claim, raises MissingRequiredClaimError if
+#     the claim does not exist.
 
-    """
-    decoded = decode(encoded)
-    try:
-        return decoded[claim]
-    except KeyError:
-        raise MissingRequiredClaimError(claim)
+#     """
+#     decoded = decode(encoded)
+#     try:
+#         return decoded[claim]
+#     except KeyError:
+#         raise MissingRequiredClaimError(claim)
 
 
 class RequestTokenQuerySet(models.query.QuerySet):
 
     """Custom QuerySet for RquestToken objects."""
 
-    def get_from_jwt(self, encoded):
-        """Decode and verify a JWT into a RequestToken.
+    # def get_from_jwt(self, encoded):
+    #     """Decode and verify a JWT into a RequestToken.
 
-        This method decodes the JWT, verifies it, and extracts the
-        'jti' claim, from which it fetches the relevant RequestToken
-        object. Raises DoesNotExist error if it can't be found.
+    #     This method decodes the JWT, verifies it, and extracts the
+    #     'jti' claim, from which it fetches the relevant RequestToken
+    #     object. Raises DoesNotExist error if it can't be found.
 
-        NB It only verifies the signature - it does *not* verify the
-        exp and nbf claims as we want to return the RequestToken before
-        validating the token - so we only care that it is untampered,
-        and that it has a 'jti' value.
+    #     NB It only verifies the signature - it does *not* verify the
+    #     exp and nbf claims as we want to return the RequestToken before
+    #     validating the token - so we only care that it is untampered,
+    #     and that it has a 'jti' value.
 
-        Args:
-            encoded: string, the 3-part 'headers.payload.signature' encoded JWT.
+    #     Args:
+    #         encoded: string, the 3-part 'headers.payload.signature' encoded JWT.
 
-        Returns the matching RequestToken object.
+    #     Returns the matching RequestToken object.
 
-        """
-        return self.get(id=extract_claim(encoded, 'jti'))
+    #     """
+    #     return self.get(id=extract_claim(encoded, 'jti'))
 
     def create_token(self, target_url, **kwargs):
         """Create a new RequestToken, setting the target_url."""
@@ -155,7 +149,7 @@ class RequestToken(models.Model):
     )
     used_to_date = models.IntegerField(
         default=0,
-        help_text="Number times the token has been used to date (raises MaxUseError)."
+        help_text="Number of times the token has been used to date (raises MaxUseError)."
     )
 
     objects = RequestTokenQuerySet.as_manager()
@@ -169,15 +163,12 @@ class RequestToken(models.Model):
     @property
     def iss(self):
         """Issuer claim."""
-        return Site.objects.get_current().domain
+        return Site.objects.get_current().domain if USE_SITE else None
 
     @property
     def aud(self):
         """Audience claim."""
-        if self.user is None:
-            return None
-        else:
-            return self.user.username
+        return self.user.username if self.user else None
 
     @property
     def exp(self):
@@ -200,10 +191,15 @@ class RequestToken(models.Model):
         return self.id
 
     @property
-    def registered_claims(self):
+    def max(self):
+        """JWT max use claim."""
+        return self.max_uses
+
+    @property
+    def default_claims(self):
         """Return the registered claims portion of the token."""
         claims = {}
-        for claim in REGISTERED_CLAIMS:
+        for claim in DEFAULT_CLAIMS:
             claim_value = getattr(self, claim, None)
             if claim_value is not None:
                 claims[claim] = claim_value
@@ -212,11 +208,11 @@ class RequestToken(models.Model):
     @property
     def payload(self):
         """The payload to be encoded."""
-        claims = self.registered_claims
+        claims = self.default_claims
         claims.update(json.loads(self.data))
         return claims
 
-    def encode(self):
+    def jwt(self):
         """Encode the JWT.
 
         This is where the token is built up and then
@@ -232,24 +228,37 @@ class RequestToken(models.Model):
             "RequestToken missing `id` - ensure that "
             "the token is saved before calling the `encode` method."
         )
-        return jwt.encode(self.payload, settings.SECRET_KEY)
+        return encode(self.payload)
 
-    def validate(self):
-        """Validate token expiry and max uses."""
-        self._validate_expiry()
-        self._validate_max_uses()
+    def validate_request(self, request):
+        """Validate token against the incoming request.
 
-    def _validate_expiry(self):
-        """Validate the not before and expiry dates.
+        This method checks the current token hasn't exceeded
+        the usage count, that the request is valid (target_url, user)
+        and then sets the request.
 
-        Raises jwt ImmatureSignatureError or ExpiredSignatureError.
+        It may raise any of the following errors:
+
+            TargetUrlError
+            MaxUseError
+            InvalidAudienceError
 
         """
-        now = tz_now()
-        if now < (self.not_before_time or datetime.datetime.min):
-            raise ImmatureSignatureError()
-        if now > (self.expiration_time or datetime.datetime.max):
-            raise ExpiredSignatureError()
+        self._validate_max_uses()
+        self._validate_request_url(request)
+        self._validate_request_user(request)
+
+    # def _validate_expiry(self):
+    #     """Validate the not before and expiry dates.
+
+    #     Raises jwt ImmatureSignatureError or ExpiredSignatureError.
+
+    #     """
+    #     now = tz_now()
+    #     if now < (self.not_before_time or datetime.datetime.min):
+    #         raise ImmatureSignatureError()
+    #     if now > (self.expiration_time or datetime.datetime.max):
+    #         raise ExpiredSignatureError()
 
     def _validate_max_uses(self):
         """Check that we haven't exceeded the max_uses value.
@@ -258,24 +267,24 @@ class RequestToken(models.Model):
 
         """
         if self.used_to_date >= self.max_uses:
-            raise MaxUseError("JWT has exceeded max uses")
+            raise MaxUseError("RequestToken [%s] has exceeded max uses" % self.id)
 
-    def validate_request(self, request):
-        """Validate a request against the token object.
+    # def validate_request(self, request):
+    #     """Validate a request against the token object.
 
-        Sets the request.user object to the token.recipient _if_ all
-        validation passes, else raises InvalidTokenError.
+    #     Sets the request.user object to the token.recipient _if_ all
+    #     validation passes, else raises InvalidTokenError.
 
-        NB This does **not** verify the JWT signature - this must be done
-        elsewhere.
+    #     NB This does **not** verify the JWT signature - this must be done
+    #     elsewhere.
 
-        Args:
-            request: HttpRequest object to validate.
+    #     Args:
+    #         request: HttpRequest object to validate.
 
-        """
-        self._validate_request_url(request)
-        self._validate_request_user(request)
-        request.token = self
+    #     """
+    #     self._validate_request_url(request)
+    #     self._validate_request_user(request)
+    #     request.token = self
 
     def _validate_request_url(self, request):
         """Confirm that request.path and target_url match.
@@ -287,7 +296,11 @@ class RequestToken(models.Model):
         if self.target_url in ('', None):
             return
         if self.target_url != request.path:
-            raise TargetUrlError("JWT url mismatch")
+            raise TargetUrlError(
+                "RequestToken [%s] url mismatch: '%s' != '%s'" % (
+                    self.id, request.path, self.target_url
+                )
+            )
 
     def _validate_request_user(self, request):
         """Validate and set the request.user from object user.
@@ -296,13 +309,13 @@ class RequestToken(models.Model):
         and if it doesn't we raise an InvalidAudienceError.
 
         """
+        if self.user is None:
+            return
+
         assert hasattr(request, 'user'), (
             "Request is missing user property. Please ensure that the Django "
             "authentication middleware is installed."
         )
-
-        if self.user is None:
-            return
 
         # we have a token user set, and an anonymous user on the request,
         # so replace that with the token user
@@ -313,7 +326,11 @@ class RequestToken(models.Model):
         # we have an authenticated user that does *not* match the user
         # we are expecting, so bomb out here.
         if request.user != self.user:
-            raise InvalidAudienceError("JWT audience mismatch")
+            raise InvalidAudienceError(
+                "RequestToken [%s] audience mismatch: '%s' != '%s'" % (
+                    self.id, request.user, self.user
+                )
+            )
 
     @transaction.atomic
     def log(self, request, response):

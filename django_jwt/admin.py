@@ -7,7 +7,8 @@ from django.contrib import admin
 from django.utils.safestring import mark_safe
 from django.utils.timezone import now as tz_now
 
-from django_jwt.models import RequestToken, RequestTokenLog
+from django_jwt.models import RequestToken
+# , RequestTokenLog
 
 
 def pretty_print(data):
