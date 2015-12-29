@@ -46,6 +46,8 @@ def expiring_link(view_func):
             # these are all InvalidTokenError exceptions, but in this case
             # the token _will_ have been loaded from the db
             token.validate_request(request)
+            # JWT hsa been verified, and token checks out, so set the user
+            request.user = token.user
         except InvalidTokenError as ex:
             logger.warning("JWT token error: %s", ex)
             token_error = ex

@@ -19,76 +19,10 @@ from django_jwt.utils import to_seconds, encode
 # list of the default claims that will be included in each JWT
 DEFAULT_CLAIMS = ('iss', 'aud', 'exp', 'nbf', 'iat', 'jti', 'max')
 
-# # the default decoding is to verify the signature only
-# DEFAULT_DECODE_OPTIONS = {
-#     'verify_signature': True,
-#     'verify_exp': False,
-#     'verify_nbf': False,
-#     'verify_iat': False,
-#     'verify_aud': False,
-#     'verify_iss': False,
-#     'require_exp': False,
-#     'require_iat': False,
-#     'require_nbf': False
-# }
-
-
-# def to_seconds(timestamp):
-#     """Convert timestamp into integers since epoch."""
-#     try:
-#         return calendar.timegm(timestamp.utctimetuple())
-#     except:
-#         return None
-
-
-# def decode(encoded, options=DEFAULT_DECODE_OPTIONS):
-#     """Decode JWT and verify the signature.
-
-#     Returns the decoded payload.
-
-#     """
-#     return jwt.decode(encoded, settings.SECRET_KEY, options=DEFAULT_DECODE_OPTIONS)
-
-
-# def extract_claim(encoded, claim):
-#     """Decode and verify JWT, and extract a single claim.
-
-#     This function will decode the JWT, verifying the signature only.
-
-#     Returns the value of the claim, raises MissingRequiredClaimError if
-#     the claim does not exist.
-
-#     """
-#     decoded = decode(encoded)
-#     try:
-#         return decoded[claim]
-#     except KeyError:
-#         raise MissingRequiredClaimError(claim)
-
 
 class RequestTokenQuerySet(models.query.QuerySet):
 
     """Custom QuerySet for RquestToken objects."""
-
-    # def get_from_jwt(self, encoded):
-    #     """Decode and verify a JWT into a RequestToken.
-
-    #     This method decodes the JWT, verifies it, and extracts the
-    #     'jti' claim, from which it fetches the relevant RequestToken
-    #     object. Raises DoesNotExist error if it can't be found.
-
-    #     NB It only verifies the signature - it does *not* verify the
-    #     exp and nbf claims as we want to return the RequestToken before
-    #     validating the token - so we only care that it is untampered,
-    #     and that it has a 'jti' value.
-
-    #     Args:
-    #         encoded: string, the 3-part 'headers.payload.signature' encoded JWT.
-
-    #     Returns the matching RequestToken object.
-
-    #     """
-    #     return self.get(id=extract_claim(encoded, 'jti'))
 
     def create_token(self, target_url, **kwargs):
         """Create a new RequestToken, setting the target_url."""
@@ -234,8 +168,7 @@ class RequestToken(models.Model):
         """Validate token against the incoming request.
 
         This method checks the current token hasn't exceeded
-        the usage count, that the request is valid (target_url, user)
-        and then sets the request.
+        the usage count, that the request is valid (target_url, user).
 
         It may raise any of the following errors:
 
@@ -245,20 +178,8 @@ class RequestToken(models.Model):
 
         """
         self._validate_max_uses()
-        self._validate_request_url(request)
-        self._validate_request_user(request)
-
-    # def _validate_expiry(self):
-    #     """Validate the not before and expiry dates.
-
-    #     Raises jwt ImmatureSignatureError or ExpiredSignatureError.
-
-    #     """
-    #     now = tz_now()
-    #     if now < (self.not_before_time or datetime.datetime.min):
-    #         raise ImmatureSignatureError()
-    #     if now > (self.expiration_time or datetime.datetime.max):
-    #         raise ExpiredSignatureError()
+        self._validate_request_path(request.path)
+        self._validate_request_user(request.user)
 
     def _validate_max_uses(self):
         """Check that we haven't exceeded the max_uses value.
@@ -269,66 +190,35 @@ class RequestToken(models.Model):
         if self.used_to_date >= self.max_uses:
             raise MaxUseError("RequestToken [%s] has exceeded max uses" % self.id)
 
-    # def validate_request(self, request):
-    #     """Validate a request against the token object.
-
-    #     Sets the request.user object to the token.recipient _if_ all
-    #     validation passes, else raises InvalidTokenError.
-
-    #     NB This does **not** verify the JWT signature - this must be done
-    #     elsewhere.
-
-    #     Args:
-    #         request: HttpRequest object to validate.
-
-    #     """
-    #     self._validate_request_url(request)
-    #     self._validate_request_user(request)
-    #     request.token = self
-
-    def _validate_request_url(self, request):
+    def _validate_request_path(self, path):
         """Confirm that request.path and target_url match.
 
         Raises TargetUrlError if they don't match.
 
         """
         # check that target_url matches the current request
-        if self.target_url in ('', None):
+        if self.target_url in ('', None, path):
             return
-        if self.target_url != request.path:
+        else:
             raise TargetUrlError(
                 "RequestToken [%s] url mismatch: '%s' != '%s'" % (
-                    self.id, request.path, self.target_url
+                    self.id, path, self.target_url
                 )
             )
 
-    def _validate_request_user(self, request):
+    def _validate_request_user(self, user):
         """Validate and set the request.user from object user.
 
         If the object has a user set, then it must match the request.user,
         and if it doesn't we raise an InvalidAudienceError.
 
         """
-        if self.user is None:
-            return
-
-        assert hasattr(request, 'user'), (
-            "Request is missing user property. Please ensure that the Django "
-            "authentication middleware is installed."
-        )
-
-        # we have a token user set, and an anonymous user on the request,
-        # so replace that with the token user
-        if request.user.is_anonymous():
-            request.user = self.user
-            return
-
         # we have an authenticated user that does *not* match the user
         # we are expecting, so bomb out here.
-        if request.user != self.user:
+        if user.is_authenticated() and user != self.user:
             raise InvalidAudienceError(
                 "RequestToken [%s] audience mismatch: '%s' != '%s'" % (
-                    self.id, request.user, self.user
+                    self.id, user, self.user
                 )
             )
 
