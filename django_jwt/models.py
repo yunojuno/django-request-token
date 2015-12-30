@@ -185,6 +185,8 @@ class RequestToken(models.Model):
         and if it doesn't we raise an InvalidAudienceError.
 
         """
+        if self.user is None:
+            return
         # we have an authenticated user that does *not* match the user
         # we are expecting, so bomb out here.
         if user.is_authenticated() and user != self.user:
