@@ -1,13 +1,16 @@
-django_jwt_expiringlinks
-------------------------
+.. image:: https://travis-ci.org/yunojuno/django-expiring-links.svg
+    :target: https://travis-ci.org/yunojuno/django-expiring-links
+    
+django_expiring-links
+---------------------
 
 Django app that uses JWT to manage one-time and expiring links to protected URLs.
 
 Use Case
 ========
 
-The primary use case for this app is authenticating users on a per-
-request basis, without having to log in to the site first.
+The primary use case for this app is authenticating users on a per-request
+basis, without having to log in to the site first.
 
 The canonical example of this would be unsubscribing from mailing lists -
 you want to be able to identify the user, and process the request,
