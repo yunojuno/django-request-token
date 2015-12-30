@@ -15,8 +15,8 @@ class MaxUseError(InvalidTokenError):
     pass
 
 
-class TargetUrlError(InvalidTokenError):
+class ScopeError(InvalidTokenError):
 
-    """Error raised when a token target_url does not match the request path."""
+    """Error raised when a token scope does not match the function scope."""
 
     pass

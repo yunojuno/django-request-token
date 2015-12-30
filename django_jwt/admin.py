@@ -30,7 +30,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
 
     list_display = (
         'user',
-        'target_url',
+        'scope',
         'not_before_time',
         'expiration_time',
         'max_uses',

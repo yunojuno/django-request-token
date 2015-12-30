@@ -1,0 +1,66 @@
+# -*- coding: utf-8 -*-
+"""django_jwt middleware."""
+import logging
+
+from django.http import HttpResponseForbidden, HttpResponseNotAllowed
+
+from jwt.exceptions import InvalidTokenError
+
+from django_jwt.settings import JWT_QUERYSTRING_ARG
+from django_jwt.utils import decode
+
+logger = logging.getLogger(__name__)
+
+
+class RequestTokenMiddleware(object):
+
+    """Extract and verify request tokens from incoming GET requests.
+
+    This middleware is used to perform initial JWT verfication of
+    link tokens.
+
+    """
+
+    def process_request(self, request):
+        """Verify JWT request querystring arg.
+
+        If a token is found (using JWT_QUERYSTRING_ARG), then it is decoded,
+        which verifies the signature and expiry dates, and raises a 403 if
+        the token is invalid.
+
+        The decoded payload is then added to the request as the `token_payload`
+        property - allowing it to be interrogated by the view function
+        decorator when it gets there.
+
+        We don't substitute in the user at this point, as we are not making
+        any assumptions about the request path at this point - it's not until
+        we get to the view function that we know where we are heading - at
+        which point we verify that the scope matches, and only then do we
+        use the token user.
+
+        """
+        assert hasattr(request, 'session'), (
+            "Request has no session attribute, please ensure that Django "
+            "session middleware is installed."
+        )
+        assert hasattr(request, 'user'), (
+            "Request has no user attribute, please ensure that Django "
+            "authentication middleware is installed."
+        )
+
+        token = request.GET.get(JWT_QUERYSTRING_ARG)
+
+        if token is None:
+            return
+
+        if request.method != 'GET':
+            return HttpResponseNotAllowed(['GET'])
+
+        try:
+            request.token_payload = decode(token)
+        except InvalidTokenError as ex:
+            key = request.session.session_key
+            logger.warning("JWT token error (error code:'%s'): %s", key, ex)
+            response = HttpResponseForbidden("Temporary link token error (code: %s)" % key)
+            response.error = ex
+            return response

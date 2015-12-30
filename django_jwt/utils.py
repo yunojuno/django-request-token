@@ -21,17 +21,26 @@ DEFAULT_DECODE_OPTIONS = {
     'require_nbf': False
 }
 
+MANDATORY_CLAIMS = ('jti', 'sub')
 
-def encode(payload):
+
+def check_mandatory_claims(payload, claims=MANDATORY_CLAIMS):
+    """Check dict for mandatory claims."""
+    for claim in claims:
+        if claim not in payload:
+            raise exceptions.MissingRequiredClaimError(claim)
+
+
+def encode(payload, check_claims=MANDATORY_CLAIMS):
     """Encode JSON payload (using SECRET_KEY)."""
+    check_mandatory_claims(payload, claims=check_claims)
     return jwt_encode(payload, settings.SECRET_KEY)
 
 
-def decode(token, options=DEFAULT_DECODE_OPTIONS):
-    """Decode JWT payload (using SECRET_KEY)."""
+def decode(token, options=DEFAULT_DECODE_OPTIONS, check_claims=MANDATORY_CLAIMS):
+    """Decode JWT payload and check for 'jti', 'sub' claims."""
     decoded = jwt_decode(token, settings.SECRET_KEY, options=options)
-    if 'jti' not in decoded:
-        raise exceptions.MissingRequiredClaimError('jti')
+    check_mandatory_claims(decoded, claims=check_claims)
     return decoded
 
 

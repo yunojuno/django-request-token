@@ -1,17 +1,30 @@
 # -*- coding: utf-8 -*-
 """django_jwt decorators."""
+import functools
 import logging
+
+from django.http import HttpResponseForbidden
 
 from jwt.exceptions import InvalidTokenError
 
-from django_jwt.utils import decode
+from django_jwt.exceptions import ScopeError
 from django_jwt.models import RequestToken
-from django_jwt.settings import JWT_QUERYSTRING_ARG
 
 logger = logging.getLogger(__name__)
 
 
-def expiring_link(view_func):
+def respond_to_error(session_key, error):
+    """Log request error and generate 403 response."""
+    logger.warning(
+        "JWT token error in session '%s': %s",
+        session_key, error
+    )
+    response = HttpResponseForbidden("Invalid URL token (code: %s)" % session_key)
+    response.error = error
+    return response
+
+
+def expiring_link(view_func=None, scope=None):
     """Decorator used to indicate that function supports expiring links.
 
     This function decorator is responsible for expanding the JWT token and
@@ -26,45 +39,43 @@ def expiring_link(view_func):
     response as `response.token_error` - this can then be intercepted in
     custom middleware should you wish to.
 
+    For more details on decorators with optional args, see:
+    https://blogs.it.ox.ac.uk/inapickle/2012/01/05/python-decorators-with-optional-arguments/
+
     """
+    assert scope not in ('', None), "@expiring_link decorator scope cannot be empty."
+
+    if view_func is None:
+        return functools.partial(expiring_link, scope=scope)
+
+    @functools.wraps(view_func)
     def inner(request, *args, **kwargs):
 
-        jwt = request.GET.get(JWT_QUERYSTRING_ARG, None)
-        if jwt is None:
+        payload = getattr(request, 'token_payload', None)
+        if payload is None:
             return view_func(request, *args, **kwargs)
 
-        token, token_error = (None, None)
-
         try:
-            # decoding the token uses PyJWT decode, raising InvalidTokenError -
-            # NB in these cases the token is never loaded from the DB
-            jwt_decoded = decode(jwt)
-            token_id = jwt_decoded['jti']
+            subject = payload['sub']
+            if subject != scope:
+                raise ScopeError(
+                    "RequestToken scope mismatch: '%s' != '%s'" %
+                    (subject, scope)
+                )
             # raises standard DoesNotExist exception if not found
+            token_id = payload['jti']
             token = RequestToken.objects.get(id=token_id)
-            # raises MaxUseError, TargetUrlError, InvalidAudienceError -
-            # these are all InvalidTokenError exceptions, but in this case
-            # the token _will_ have been loaded from the db
+            # raises MaxUseError, InvalidAudienceError
             token.validate_request(request)
             # JWT hsa been verified, and token checks out, so set the user
-            request.user = token.user
-        except InvalidTokenError as ex:
-            logger.warning("JWT token error: %s", ex)
-            token_error = ex
-        except RequestToken.DoesNotExist as ex:
-            logger.warning("JWT token error: RequestToken [%s] does not exist", token_id)
-            token_error = ex
-        finally:
-            # we call the view irrespective - if the token worked we
-            # will have a new request.user set, else we are calling the func
-            # with the existing user.
-            request.token = token
+            request.token, request.user = token, token.user
             response = view_func(request, *args, **kwargs)
-            response.token_error = token_error
+            token.log(request, response)
+            return response
 
-            if request.token is not None and response.token_error is None:
-                token.log(request, response)
-
-        return response
+        except (RequestToken.DoesNotExist, InvalidTokenError) as ex:
+            # this will log the exception and return a 403
+            return respond_to_error(request.session.session_key, ex)
 
     return inner
+

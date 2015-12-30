@@ -3,30 +3,22 @@
 import json
 
 from django.contrib.auth.models import User
-try:
-    from django.contrib.sites.models import Site
-    USE_SITE = True
-except ImportError:
-    USE_SITE = False
 from django.db import models, transaction
 from django.utils.timezone import now as tz_now
 
 from jwt.exceptions import InvalidAudienceError
 
-from django_jwt.exceptions import MaxUseError, TargetUrlError
+from django_jwt.exceptions import MaxUseError
 from django_jwt.utils import to_seconds, encode
-
-# list of the default claims that will be included in each JWT
-DEFAULT_CLAIMS = ('iss', 'aud', 'exp', 'nbf', 'iat', 'jti', 'max')
 
 
 class RequestTokenQuerySet(models.query.QuerySet):
 
     """Custom QuerySet for RquestToken objects."""
 
-    def create_token(self, target_url, **kwargs):
-        """Create a new RequestToken, setting the target_url."""
-        return RequestToken(target_url=target_url, **kwargs).save()
+    def create_token(self, scope, **kwargs):
+        """Create a new RequestToken."""
+        return RequestToken(scope=scope, **kwargs).save()
 
 
 class RequestToken(models.Model):
@@ -40,8 +32,7 @@ class RequestToken(models.Model):
     is for a specific use-case - sending out time-bound links to known users
     who are registered (or at least modelled) within a Django project.
     To this end, various of the pre-defined 'registered' claims are
-    preset - the issuer (iss) is set to this project, with its value taken
-    from the Sites app, and the audience (aud) is set to a single User object.
+    preset.
 
     The time-bound claims (expiration time (exp) and 'not before' (nbf)) are set on a
     per-token basis. In addition, we have a max uses (max) claim that can
@@ -50,14 +41,15 @@ class RequestToken(models.Model):
     JWT spec: https://tools.ietf.org/html/rfc7519
 
     """
+
     user = models.ForeignKey(
         User,
         blank=True, null=True,
-        help_text="Intended recipient of the JWT."
+        help_text="Intended recipient of the JWT (can be used by anyone if not set)."
     )
-    target_url = models.CharField(
-        max_length=200,
-        help_text="The target endpoint."
+    scope = models.CharField(
+        max_length=100,
+        help_text="Label used to match request to view function in decorator."
     )
     expiration_time = models.DateTimeField(
         blank=True, null=True,
@@ -95,73 +87,77 @@ class RequestToken(models.Model):
         return self
 
     @property
-    def iss(self):
-        """Issuer claim."""
-        return Site.objects.get_current().domain if USE_SITE else None
-
-    @property
     def aud(self):
-        """Audience claim."""
-        return self.user.username if self.user else None
+        """The 'aud' claim, maps to user.id."""
+        return self.default_claims.get('aud')
 
     @property
     def exp(self):
-        """Expiration time claim."""
-        return to_seconds(self.expiration_time)
+        """The 'exp' claim, maps to expiration_time."""
+        return self.default_claims.get('exp')
 
     @property
     def nbf(self):
-        """Not before time claim."""
-        return to_seconds(self.not_before_time)
+        """The 'nbf' claim, maps to not_before_time."""
+        return self.default_claims.get('nbf')
 
     @property
     def iat(self):
-        """Issued at claim."""
-        return to_seconds(self.issued_at)
+        """The 'iat' claim, maps to issued_at."""
+        return self.default_claims.get('iat')
 
     @property
     def jti(self):
-        """JWT id claim."""
-        return self.id
+        """The 'jti' claim, maps to id."""
+        return self.default_claims.get('jti')
 
     @property
     def max(self):
-        """JWT max use claim."""
-        return self.max_uses
+        """The 'max' claim, maps to max_uses."""
+        return self.default_claims.get('max')
+
+    @property
+    def sub(self):
+        """The 'sub' claim, maps to scope."""
+        return self.default_claims.get('sub')
 
     @property
     def default_claims(self):
-        """Return the registered claims portion of the token."""
-        claims = {}
-        for claim in DEFAULT_CLAIMS:
-            claim_value = getattr(self, claim, None)
-            if claim_value is not None:
-                claims[claim] = claim_value
+        """A dict containing all of the DEFAULT_CLAIMS (where values exist)."""
+        claims = {
+            'max': self.max_uses,
+            'sub': self.scope
+        }
+        if self.id is not None:
+            claims['jti'] = self.id
+        if self.user is not None:
+            claims['aud'] = self.user.id
+        if self.expiration_time is not None:
+            claims['exp'] = to_seconds(self.expiration_time)
+        if self.issued_at is not None:
+            claims['iat'] = to_seconds(self.issued_at)
+        if self.not_before_time is not None:
+            claims['nbf'] = to_seconds(self.not_before_time)
         return claims
 
     @property
     def payload(self):
-        """The payload to be encoded."""
+        """A dict combining the default claims and the token data."""
         claims = self.default_claims
         claims.update(json.loads(self.data))
         return claims
 
     def jwt(self):
-        """Encode the JWT.
+        """Encode the payload into a JWT.
 
-        This is where the token is built up and then
-        encoded. It uses the `payload` property as the
-        token payload, which includes within it all of
-        the supplied registered claims, combined with the
-        `data` values.
+        This is where the token is built up and then encoded. It uses
+        the `payload` property as the token payload, which includes within
+        it all of the supplied registered claims, combined with the `data`
+        values.
 
         It is signed using the Django SECRET_KEY value.
 
         """
-        assert self.id is not None, (
-            "RequestToken missing `id` - ensure that "
-            "the token is saved before calling the `encode` method."
-        )
         return encode(self.payload)
 
     def validate_request(self, request):
@@ -172,13 +168,12 @@ class RequestToken(models.Model):
 
         It may raise any of the following errors:
 
-            TargetUrlError
+            # TargetUrlError
             MaxUseError
             InvalidAudienceError
 
         """
         self._validate_max_uses()
-        self._validate_request_path(request.path)
         self._validate_request_user(request.user)
 
     def _validate_max_uses(self):
@@ -189,22 +184,6 @@ class RequestToken(models.Model):
         """
         if self.used_to_date >= self.max_uses:
             raise MaxUseError("RequestToken [%s] has exceeded max uses" % self.id)
-
-    def _validate_request_path(self, path):
-        """Confirm that request.path and target_url match.
-
-        Raises TargetUrlError if they don't match.
-
-        """
-        # check that target_url matches the current request
-        if self.target_url in ('', None, path):
-            return
-        else:
-            raise TargetUrlError(
-                "RequestToken [%s] url mismatch: '%s' != '%s'" % (
-                    self.id, path, self.target_url
-                )
-            )
 
     def _validate_request_user(self, user):
         """Validate and set the request.user from object user.

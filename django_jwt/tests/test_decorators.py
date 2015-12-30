@@ -5,19 +5,29 @@ from jwt import exceptions
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.test import TransactionTestCase, RequestFactory
 
-from django_jwt.decorators import expiring_link
-from django_jwt.exceptions import MaxUseError, TargetUrlError
+from django_jwt.decorators import expiring_link, respond_to_error
+from django_jwt.exceptions import MaxUseError, ScopeError
 from django_jwt.models import RequestToken, RequestTokenLog
 from django_jwt.settings import JWT_QUERYSTRING_ARG
+from django_jwt.middleware import RequestTokenMiddleware
 
 
-@expiring_link
+@expiring_link(scope="foo")
 def test_view_func(request):
-    """Return HttpResponse object - request should be decorated with appropriate values."""
-    return HttpResponse("Hello, world!")
+    """Return decorated request / response objects."""
+    return HttpResponse("Hello, world!", status=200)
+
+
+class MockSession(object):
+
+    """Fake Session model used to support `session_key` property."""
+
+    @property
+    def session_key(self):
+        return "foobar"
 
 
 class DecoratorTests(TransactionTestCase):
@@ -26,114 +36,77 @@ class DecoratorTests(TransactionTestCase):
 
     def setUp(self):
         self.factory = RequestFactory()
+        self.middleware = RequestTokenMiddleware()
 
     def _request(self, path, token, user):
         path = path + "?%s=%s" % (JWT_QUERYSTRING_ARG, token) if token else path
         request = self.factory.get(path)
+        request.session = MockSession()
         request.user = user
+        self.middleware.process_request(request)
         return request
 
-    def _assertResponse(self, request, token, token_error):
+    def _assertResponse(self, request, response_type, token=None, response_err=None):
         response = test_view_func(request)
-        self.assertEqual(request.token, token)
-        if token_error is not None:
-            self.assertIsInstance(response.token_error, token_error)
+        self.assertIsInstance(response, response_type)
+        if response_err:
+            self.assertIsInstance(response.error, response_err)
+        if token is None:
+            self.assertFalse(hasattr(request, 'token'))
+            self.assertFalse(RequestTokenLog.objects.exists())
         else:
-            self.assertIsNone(response.token_error)
+            self.assertEqual(request.token, token)
+            self.assertTrue(RequestTokenLog.objects.exists())
+
+    def test_respond_to_error(self):
+        ex = Exception("foo")
+        response = respond_to_error("bar", ex)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.error, ex)
 
     def test_no_token(self):
         request = self._request('/', None, AnonymousUser())
         response = test_view_func(request)
         self.assertEqual(response.status_code, 200)
         self.assertFalse(hasattr(request, 'token'))
-        self.assertFalse(hasattr(request, 'jwt_error'))
-        self.assertFalse(RequestTokenLog.objects.exists())
-
-    def test_decode_error(self):
-        request = self._request('/', 'foo', AnonymousUser())
-        self._assertResponse(
-            request,
-            token=None,
-            token_error=exceptions.DecodeError,
-        )
         self.assertFalse(RequestTokenLog.objects.exists())
 
     def test_missing_token(self):
-        token = RequestToken().save()
+        token = RequestToken.objects.create_token(scope="foo")
         RequestToken.objects.all().delete()
         request = self._request('/', token.jwt(), AnonymousUser())
-        self._assertResponse(
-            request,
-            token=None,
-            token_error=RequestToken.DoesNotExist,
-        )
-        self.assertFalse(RequestTokenLog.objects.exists())
+        self._assertResponse(request, HttpResponseForbidden, response_err=RequestToken.DoesNotExist)
 
-    def test_invalid_token_decode(self):
-        token = RequestToken(expiration_time=datetime.datetime(1970, 1, 1)).save()
+    def test_max_token_use(self):
+        token = RequestToken.objects.create_token(scope="foo", used_to_date=1)
         request = self._request('/', token.jwt(), AnonymousUser())
-        token.max_uses = 100
-        token.expiration_time = datetime.datetime(1970, 1, 1)
-        token.save()
-        self._assertResponse(
-            request,
-            token=None,  # token cannot be decoded, so won't be loaded from DB
-            token_error=exceptions.InvalidTokenError,
-        )
+        self._assertResponse(request, HttpResponseForbidden, response_err=MaxUseError)
 
-        self.assertFalse(RequestTokenLog.objects.exists())
-
-    def test_invalid_token(self):
-        token = RequestToken(used_to_date=1, max_uses=1).save()
+    def test_scope(self):
+        token = RequestToken.objects.create_token(scope="foobar")
         request = self._request('/', token.jwt(), AnonymousUser())
-        self._assertResponse(
-            request,
-            token=token,
-            token_error=MaxUseError,
-        )
-
-        token.max_uses = 100
-        token.target_url = '/foo'
-        token.save()
-        request = self._request('/', token.jwt(), AnonymousUser())
-        self._assertResponse(
-            request,
-            token=token,
-            token_error=TargetUrlError,
-        )
+        self._assertResponse(request, HttpResponseForbidden, response_err=ScopeError)
 
     def test_valid_token_with_user(self):
         user = get_user_model().objects.create_user('zoidberg')
-        token = RequestToken(user=user).save()
+        token = RequestToken.objects.create_token(scope="foo", user=user)
         # we're sending the request anonymously, but we have a valid
         # token, so we _should_ get the function run as the user.
         request = self._request('/', token.jwt(), AnonymousUser())
         self._assertResponse(
             request,
-            token=token,
-            token_error=None,
+            response_type=HttpResponse,
+            token=token
         )
         self.assertTrue(RequestTokenLog.objects.exists())
 
     def test_valid_token_with_wrong_user(self):
-        user1 = get_user_model().objects.create_user('zoidberg')
-        user2 = get_user_model().objects.create_user('fry')
-        token = RequestToken(user=user1).save()
+        user1 = get_user_model().objects.create_user('zoidberg', password='secret')
+        user2 = get_user_model().objects.create_user('fry', password='secret')
+        token = RequestToken.objects.create_token(scope="foo", user=user1)
         request = self._request('/', token.jwt(), user2)
         self._assertResponse(
             request,
-            token=token,
-            token_error=exceptions.InvalidAudienceError,
+            response_type=HttpResponseForbidden,
+            response_err=exceptions.InvalidAudienceError,
         )
-        self.assertFalse(RequestTokenLog.objects.exists())
-
-    def test_valid_token_with_wrong_url(self):
-        user = get_user_model().objects.create_user('zoidberg')
-        token = RequestToken(user=user, target_url="/bar").save()
-        request = self._request('/', token.jwt(), user)
-        self._assertResponse(
-            request,
-            token=token,
-            token_error=TargetUrlError,
-        )
-        self.assertFalse(RequestTokenLog.objects.exists())
