@@ -84,7 +84,9 @@ def use_request_token(view_func=None, scope=None, required=False):
             # raises MaxUseError, InvalidAudienceError
             token.validate_request(request)
             # JWT hsa been verified, and token checks out, so set the user
-            request.token, request.user = token, token.user
+            request.token = token
+            if token.user is not None and token.user.is_authenticated():
+                request.user = token.user
             response = view_func(request, *args, **kwargs)
             token.log(request, response)
             return response
