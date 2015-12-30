@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """django_jwt models."""
-import json
-
 from django.contrib.auth.models import User
 from django.db import models, transaction
 from django.utils.timezone import now as tz_now
@@ -61,7 +59,7 @@ class RequestToken(models.Model):
     )
     data = models.TextField(
         max_length=1000,
-        help_text="Custom data (JSON) added to the default payload.",
+        help_text="Custom data add to the token, but not encoded (must be fetched from DB).",
         blank=True,
         default='{}'
     )
@@ -89,40 +87,40 @@ class RequestToken(models.Model):
     @property
     def aud(self):
         """The 'aud' claim, maps to user.id."""
-        return self.default_claims.get('aud')
+        return self.claims.get('aud')
 
     @property
     def exp(self):
         """The 'exp' claim, maps to expiration_time."""
-        return self.default_claims.get('exp')
+        return self.claims.get('exp')
 
     @property
     def nbf(self):
         """The 'nbf' claim, maps to not_before_time."""
-        return self.default_claims.get('nbf')
+        return self.claims.get('nbf')
 
     @property
     def iat(self):
         """The 'iat' claim, maps to issued_at."""
-        return self.default_claims.get('iat')
+        return self.claims.get('iat')
 
     @property
     def jti(self):
         """The 'jti' claim, maps to id."""
-        return self.default_claims.get('jti')
+        return self.claims.get('jti')
 
     @property
     def max(self):
         """The 'max' claim, maps to max_uses."""
-        return self.default_claims.get('max')
+        return self.claims.get('max')
 
     @property
     def sub(self):
         """The 'sub' claim, maps to scope."""
-        return self.default_claims.get('sub')
+        return self.claims.get('sub')
 
     @property
-    def default_claims(self):
+    def claims(self):
         """A dict containing all of the DEFAULT_CLAIMS (where values exist)."""
         claims = {
             'max': self.max_uses,
@@ -140,25 +138,9 @@ class RequestToken(models.Model):
             claims['nbf'] = to_seconds(self.not_before_time)
         return claims
 
-    @property
-    def payload(self):
-        """A dict combining the default claims and the token data."""
-        claims = self.default_claims
-        claims.update(json.loads(self.data))
-        return claims
-
     def jwt(self):
-        """Encode the payload into a JWT.
-
-        This is where the token is built up and then encoded. It uses
-        the `payload` property as the token payload, which includes within
-        it all of the supplied registered claims, combined with the `data`
-        values.
-
-        It is signed using the Django SECRET_KEY value.
-
-        """
-        return encode(self.payload)
+        """Encode the token claims into a JWT."""
+        return encode(self.claims)
 
     def validate_request(self, request):
         """Validate token against the incoming request.

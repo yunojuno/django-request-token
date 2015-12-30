@@ -42,7 +42,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
     search_fields = ('user__first_name', 'user__username')
 
     def pretty_payload(self, obj):
-        return pretty_print(obj.payload)
+        return pretty_print(obj.claims)
     pretty_payload.short_description = "Payload"
 
     def jwt(self, obj):

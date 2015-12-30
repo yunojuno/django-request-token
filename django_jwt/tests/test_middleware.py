@@ -65,7 +65,7 @@ class MiddlewareTests(TransactionTestCase):
         token = RequestToken(id=1, scope="foo")
         request = new_request(token.jwt())
         self.assertIsNone(self.middleware.process_request(request))
-        self.assertEqual(request.token_payload, token.payload)
+        self.assertEqual(request.token_payload, token.claims)
 
     def test_process_request_not_allowed(self):
 

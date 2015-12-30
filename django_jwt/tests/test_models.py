@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """django_jwt model tests."""
-import json
 import mock
 
 from jwt.exceptions import InvalidAudienceError
@@ -51,11 +50,11 @@ class RequestTokenTests(TransactionTestCase):
         token = token.save(update_fields=['issued_at'])
         self.assertIsNone(token.issued_at)
 
-    def test_default_claims(self):
+    def test_claims(self):
         token = RequestToken()
         # raises error with no id set - put into context manager as it's
         # an attr, not a callable
-        self.assertTrue(len(token.default_claims), 2)
+        self.assertTrue(len(token.claims), 2)
         self.assertEqual(token.max, 1)
         self.assertEqual(token.sub, '')
         self.assertIsNone(token.jti)
@@ -67,33 +66,25 @@ class RequestTokenTests(TransactionTestCase):
         # now let's set some properties
         token.user = self.user
         self.assertEqual(token.aud, self.user.id)
-        self.assertTrue(len(token.default_claims), 3)
+        self.assertTrue(len(token.claims), 3)
 
         now = tz_now()
         now_sec = to_seconds(now)
 
         token.expiration_time = now
         self.assertEqual(token.exp, now_sec)
-        self.assertTrue(len(token.default_claims), 4)
+        self.assertTrue(len(token.claims), 4)
 
         token.not_before_time = now
         self.assertEqual(token.nbf, now_sec)
-        self.assertEqual(len(token.default_claims), 5)
+        self.assertEqual(len(token.claims), 5)
 
         # saving updates the id and issued_at timestamp
         with mock.patch('django_jwt.models.tz_now', lambda: now):
             token.save()
             self.assertEqual(token.iat, now_sec)
             self.assertEqual(token.jti, token.id)
-            self.assertEqual(len(token.default_claims), 7)
-
-    def test_payload(self):
-        token = RequestToken()
-        claims = token.default_claims
-        self.assertEqual(token.payload, claims)
-        token.data = json.dumps({'foo': 123})
-        claims.update({'foo': 123})
-        self.assertEqual(token.payload, claims)
+            self.assertEqual(len(token.claims), 7)
 
     def test__validate_max_uses(self):
         token = RequestToken()
@@ -103,19 +94,7 @@ class RequestTokenTests(TransactionTestCase):
         token.used_to_date = token.max_uses + 1
         self.assertRaises(MaxUseError, token._validate_max_uses)
 
-    # def test__validate_request_path(self):
-    #     # target_url is None
-    #     token = RequestToken()
-    #     factory = RequestFactory()
-    #     request = factory.get('/foo')
-    #     # no target_path will get through ok
-    #     token._validate_request_path(request.path)
-    #     # target_path and request.path mismatch
-    #     token.target_url = '/bar'
-    #     self.assertRaises(TargetUrlError, token._validate_request_path, request.path)
-
     def test__validate_request_user(self):
-
         # token user is None
         token = RequestToken()
         factory = RequestFactory()
