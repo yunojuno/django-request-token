@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """django_jwt decorator tests."""
-import datetime
 from jwt import exceptions
 
 from django.contrib.auth import get_user_model
@@ -8,14 +7,14 @@ from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse, HttpResponseForbidden
 from django.test import TransactionTestCase, RequestFactory
 
-from django_jwt.decorators import expiring_link, respond_to_error
-from django_jwt.exceptions import MaxUseError, ScopeError
+from django_jwt.decorators import use_request_token, respond_to_error
+from django_jwt.exceptions import MaxUseError, ScopeError, TokenNotFoundError
 from django_jwt.models import RequestToken, RequestTokenLog
 from django_jwt.settings import JWT_QUERYSTRING_ARG
 from django_jwt.middleware import RequestTokenMiddleware
 
 
-@expiring_link(scope="foo")
+@use_request_token(scope="foo")
 def test_view_func(request):
     """Return decorated request / response objects."""
     return HttpResponse("Hello, world!", status=200)
@@ -70,6 +69,15 @@ class DecoratorTests(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(hasattr(request, 'token'))
         self.assertFalse(RequestTokenLog.objects.exists())
+
+        # now force a TokenNotFoundError, by requiring it in the decorator
+        @use_request_token(scope="foo", required=True)
+        def test_view_func2(request):
+            pass
+
+        response = test_view_func2(request)
+        self.assertIsInstance(response, HttpResponseForbidden)
+        self.assertIsInstance(response.error, TokenNotFoundError)
 
     def test_missing_token(self):
         token = RequestToken.objects.create_token(scope="foo")

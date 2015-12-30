@@ -7,7 +7,7 @@ from django.http import HttpResponseForbidden
 
 from jwt.exceptions import InvalidTokenError
 
-from django_jwt.exceptions import ScopeError
+from django_jwt.exceptions import ScopeError, TokenNotFoundError
 from django_jwt.models import RequestToken
 
 logger = logging.getLogger(__name__)
@@ -24,20 +24,33 @@ def respond_to_error(session_key, error):
     return response
 
 
-def expiring_link(view_func=None, scope=None):
-    """Decorator used to indicate that function supports expiring links.
+def use_request_token(view_func=None, scope=None, required=False):
+    """Decorator used to indicate that a view function supports RequestTokens.
 
-    This function decorator is responsible for expanding the JWT token and
-    validating that it can be used - has not expired, exceeded max uses etc.
+    This decorator is used in conjunction with RequestTokens and the
+    RequestTokenMiddleware. By the time that a request has passed through the
+    middleware and reached the view function, if a RequestToken exists it will
+    have been decoded, and the payload added to the request as `token_payload`.
 
-    If the token cannot be used, we don't raise an HTTP error, we rely on the
-    underlying view to handle it - i.e. a request with an invalid token
-    behaves as if it would if the token did not exist, although the validation
-    error raised is logged as a WARNING, so that it can be monitored.
+    This decorator is then used to map the `sub` JWT token claim to the function
+    using the 'scope' kwarg - the scope must be provided, and must match the
+    scope of the request token.
 
-    If an error is raised during the token validation, it is added to the
-    response as `response.token_error` - this can then be intercepted in
-    custom middleware should you wish to.
+    Once we have verified the scope match, we then fetch the RequestToken from
+    the DB, and validate it against the max use count, and the request user.
+
+    If the RequestToken specifies a User, then the incoming request must be
+    either unauthenticated, or authenticated by the same user. If it is
+    unauthenticated, then this decorator will swap in the user as the request.user
+    so that the view function has the user it expects.
+
+
+    If the 'required' kwarg is True, then the view function expects a valid token
+    in all cases - and the decorator will raise TokenNotFoundError if one does
+    not exist.
+
+    Errors are trapped and returned as HttpResponseForbidden responses, with
+    the original error as the `response.error` property.
 
     For more details on decorators with optional args, see:
     https://blogs.it.ox.ac.uk/inapickle/2012/01/05/python-decorators-with-optional-arguments/
@@ -46,14 +59,17 @@ def expiring_link(view_func=None, scope=None):
     assert scope not in ('', None), "@expiring_link decorator scope cannot be empty."
 
     if view_func is None:
-        return functools.partial(expiring_link, scope=scope)
+        return functools.partial(use_request_token, scope=scope, required=required)
 
     @functools.wraps(view_func)
     def inner(request, *args, **kwargs):
 
         payload = getattr(request, 'token_payload', None)
         if payload is None:
-            return view_func(request, *args, **kwargs)
+            if required is True:
+                return respond_to_error(request.session.session_key, TokenNotFoundError())
+            else:
+                return view_func(request, *args, **kwargs)
 
         try:
             subject = payload['sub']
@@ -78,4 +94,3 @@ def expiring_link(view_func=None, scope=None):
             return respond_to_error(request.session.session_key, ex)
 
     return inner
-

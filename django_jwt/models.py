@@ -21,20 +21,31 @@ class RequestTokenQuerySet(models.query.QuerySet):
 
 class RequestToken(models.Model):
 
-    """A JWT token, targeted for use by a known Django User.
+    """A link token, targeted for use by a known Django User.
 
-    > JSON Web Token (JWT) is a compact, URL-safe means of representing
-    > claims to be transferred between two parties.
+    A RequestToken contains information that can be encoded as a JWT
+    (JSON Web Token). It is designed to be used in conjunction with the
+    RequestTokenMiddleware (responsible for JWT verification) and the
+    @use_request_token decorator (responsible for validating the token
+    and setting the request.user correctly).
 
-    JWTs are general purpose, however this app (and by extension this model)
-    is for a specific use-case - sending out time-bound links to known users
-    who are registered (or at least modelled) within a Django project.
-    To this end, various of the pre-defined 'registered' claims are
-    preset.
+    Each token must have a 'scope', which is used to tie it to a view function
+    that is decorated with the `use_request_token` decorator. The token can
+    only be used by functions with matching scopes.
 
-    The time-bound claims (expiration time (exp) and 'not before' (nbf)) are set on a
-    per-token basis. In addition, we have a max uses (max) claim that can
-    be used to restric usage of the token (e.g. one-time use).
+    The token may be set to a specific User, in which case, if the existing
+    request is unauthenticated, it will use that user as the `request.user`
+    property, allowing access to authenticated views.
+
+    The token may be timebound by the `not_before_time` and `expiration_time`
+    properties, which are registered JWT 'claims'.
+
+    The token may be restricted by the number of times it can be used, through
+    the `max_use` property, which is incremented each time it's used (NB *not*
+    thread-safe).
+
+    The token may also store arbitrary serializable data, which can be used
+    by the view function if the request token is valid.
 
     JWT spec: https://tools.ietf.org/html/rfc7519
 

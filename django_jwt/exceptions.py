@@ -20,3 +20,10 @@ class ScopeError(InvalidTokenError):
     """Error raised when a token scope does not match the function scope."""
 
     pass
+
+
+class TokenNotFoundError(InvalidTokenError):
+
+    """Error raised when a token is expected, but not found."""
+
+    pass

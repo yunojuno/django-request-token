@@ -1,10 +1,13 @@
 .. image:: https://travis-ci.org/yunojuno/django-expiring-links.svg
     :target: https://travis-ci.org/yunojuno/django-expiring-links
-    
-django_expiring-links
----------------------
 
-Django app that uses JWT to manage one-time and expiring links to protected URLs.
+django-request-token
+--------------------
+
+Django app that uses JWT to manage one-time and expiring tokens to protected URLs.
+
+Background
+==========
 
 Use Case
 ========
