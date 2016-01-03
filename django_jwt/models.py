@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """django_jwt models."""
+import datetime
+
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils.timezone import now as tz_now
 
@@ -50,7 +53,24 @@ class RequestToken(models.Model):
     JWT spec: https://tools.ietf.org/html/rfc7519
 
     """
+    # do not login the user on the request
+    LOGIN_MODE_NONE = 'None'
+    # login the user, but only for the original request
+    LOGIN_MODE_REQUEST = 'Request'
+    # login the user fully, but only for single-use short-duration links
+    LOGIN_MODE_SESSION = 'Session'
 
+    LOGIN_MODE_CHOICES = (
+        (LOGIN_MODE_NONE, 'Do not authenticate'),
+        (LOGIN_MODE_REQUEST, 'Authenticate a single request'),
+        (LOGIN_MODE_SESSION, 'Authenticate for the entire session'),
+    )
+    login_mode = models.CharField(
+        max_length=10,
+        default=LOGIN_MODE_NONE,
+        choices=LOGIN_MODE_CHOICES,
+        help_text="How should the request be authenticated?"
+    )
     user = models.ForeignKey(
         User,
         blank=True, null=True,
@@ -88,12 +108,6 @@ class RequestToken(models.Model):
     )
 
     objects = RequestTokenQuerySet.as_manager()
-
-    def save(self, *args, **kwargs):
-        if 'update_fields' not in kwargs:
-            self.issued_at = self.issued_at or tz_now()
-        super(RequestToken, self).save(*args, **kwargs)
-        return self
 
     @property
     def aud(self):
@@ -148,6 +162,31 @@ class RequestToken(models.Model):
         if self.not_before_time is not None:
             claims['nbf'] = to_seconds(self.not_before_time)
         return claims
+
+    def clean(self):
+        """Ensure that login_mode setting is valid."""
+        try:
+            if self.login_mode == self.LOGIN_MODE_NONE:
+                assert self.user is None, u"Anonymous login token has user set.."
+            if self.login_mode == self.LOGIN_MODE_SESSION:
+                assert self.user is not None, u"Session token has no user set."
+                assert self.expiration_time is not None, "Session token has no expiry set."
+                assert self.max_uses == 1, u"Session token is not single-use."
+                assert (
+                    (self.expiration_time - self.issued_at) > datetime.timedelta(minutes=5),
+                    u"Session token expiry time is > 5 mins."
+                )
+            if self.login_mode == self.LOGIN_MODE_REQUEST:
+                assert self.user is not None, u"Session token has no user set."
+        except AssertionError as ex:
+            raise ValidationError(ex)
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        if 'update_fields' not in kwargs:
+            self.issued_at = self.issued_at or tz_now()
+        super(RequestToken, self).save(*args, **kwargs)
+        return self
 
     def jwt(self):
         """Encode the token claims into a JWT."""
