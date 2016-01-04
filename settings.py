@@ -18,6 +18,7 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.staticfiles',
     'django_jwt',
+    'test_app'
 )
 
 MIDDLEWARE_CLASSES = [
@@ -26,6 +27,7 @@ MIDDLEWARE_CLASSES = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'django_jwt.middleware.RequestTokenMiddleware',
 ]
 
 SECRET_KEY = "django_jwt"
@@ -35,6 +37,8 @@ ROOT_URLCONF = 'urls'
 APPEND_SLASH = True
 
 STATIC_URL = '/static/'
+
+TIME_ZONE = 'utc'
 
 SITE_ID = 1
 
