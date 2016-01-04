@@ -8,7 +8,6 @@ from django.http import HttpResponseForbidden
 from jwt.exceptions import InvalidTokenError
 
 from django_jwt.exceptions import ScopeError, TokenNotFoundError
-# from django_jwt.models import RequestToken
 
 logger = logging.getLogger(__name__)
 

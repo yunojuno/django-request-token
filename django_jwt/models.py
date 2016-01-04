@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """django_jwt models."""
-# import datetime
 import logging
 
 from django.contrib.auth import login
