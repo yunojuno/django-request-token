@@ -9,30 +9,44 @@ Django app that uses JWT to manage one-time and expiring tokens to protected URL
 Background
 ==========
 
-Use Case
-========
+Use Cases
+=========
 
-The primary use case for this app is authenticating users on a per-request
-basis, without having to log in to the site first.
+This library supports three core use cases, each of which is modelled using
+the ``login_mode`` attribute of a request token:
 
-The canonical example of this would be unsubscribing from mailing lists -
-you want to be able to identify the user, and process the request,
-but requiring the user to log in first presents a barrier.
+1. Public link with payload
+2. Single authenticated request
+3. Auto-login
 
-Using JWT we can 'pre-authenticate' access to the URL.
+**Public Link** (``login_mode==RequestToken.LOGIN_MODE_NONE``)
 
-Assumptions
-===========
+In this mode (the default for a new token), there is no authentication, and no
+assigned user ('aud' claim). The token is used as a mechanism for attaching a payload
+to the link. An example of this might be a custom registration or affiliate link,
+that renders the standard template with additional information extracted from
+the token - e.g. the name of the affiliate, or the person who invited you to
+register.
 
-This is not a general purpose link-generating app - it has some implicit
-assumptions built-in:
+**Single Request** (``login_mode==RequestToken.LOGIN_MODE_REQUEST``)
 
-* The link is being sent to a single user, or everyone
-* The link will only support GET methods
-* If a single recipient, they exist as a Django User object
-* The token generated will only authenticate the initial request
-* The token will *not* log the user in or bind them to a session
-* The view endpoint URL is not sensitive, and contains no sensitive data
+In Request mode, the request.user property is overridden by the user specified
+in the token, but only for a single request. This is useful for responding to
+a single action (e.g. RSVP, unsubscribe). If the user then navigates onto another
+page on the site, they will not be authenticated. If the user is already
+authenticated, but as a different user to the one in the token, then they will
+receive a 403 response.
+
+**Auto-login** (``login_mode==RequestToken.LOGIN_MODE_SESSION``)
+
+This is the nuclear option, and must be treated with extreme care. Using a
+Session token will automatically log the user in for an entire session, giving
+the user who clicks on the link full access the token user's account. This is
+useful for automatic logins. A good example of this is the email login process
+on medium.com, which takes an email address (no password) and sends out a login
+link.
+
+Session tokens must be single-use, and have a fixed expiry of one minute.
 
 Implementation
 ==============
@@ -42,6 +56,24 @@ TODO
 * RequestToken model - hold token details
 * Middleware - decodes and verifies tokens
 * Decorator - applies token permissions to views
+
+Settings
+========
+
+``JWT_QUERYSTRING_ARG``
+
+The default querystring argument name used to extract the token from incoming
+requests.
+
+String, defaults to **token**
+
+``JWT_SESSION_TOKEN_EXPIRY``
+
+Session tokens have a fixed expiry interval (i.e. you can't set a Session token
+to expire in a day), specified in minutes. The primary use case (above) dictates
+that the expiry should be no longer than it takes to receive and open an email.
+
+Integer, defaults to **1** (minute).
 
 Logging
 =======
