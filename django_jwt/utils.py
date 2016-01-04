@@ -21,7 +21,7 @@ DEFAULT_DECODE_OPTIONS = {
     'require_nbf': False
 }
 
-MANDATORY_CLAIMS = ('jti', 'sub')
+MANDATORY_CLAIMS = ('jti', 'sub', 'mod')
 
 
 def check_mandatory_claims(payload, claims=MANDATORY_CLAIMS):

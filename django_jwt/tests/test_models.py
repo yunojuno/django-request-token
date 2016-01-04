@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """django_jwt model tests."""
+import datetime
 import mock
 
 from jwt.exceptions import InvalidAudienceError
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.http import HttpResponse
 from django.test import TransactionTestCase, RequestFactory
@@ -27,6 +29,7 @@ class RequestTokenTests(TransactionTestCase):
         token = RequestToken()
         self.assertIsNone(token.user)
         self.assertEqual(token.scope, '')
+        self.assertEqual(token.login_mode, RequestToken.LOGIN_MODE_NONE)
         self.assertIsNone(token.expiration_time)
         self.assertIsNone(token.not_before_time)
         self.assertEqual(token.data, "{}")
@@ -39,6 +42,7 @@ class RequestTokenTests(TransactionTestCase):
         self.assertIsNotNone(token)
         self.assertIsNone(token.user)
         self.assertEqual(token.scope, '')
+        self.assertEqual(token.login_mode, RequestToken.LOGIN_MODE_NONE)
         self.assertIsNone(token.expiration_time)
         self.assertIsNone(token.not_before_time)
         self.assertEqual(token.data, "{}")
@@ -54,7 +58,7 @@ class RequestTokenTests(TransactionTestCase):
         token = RequestToken()
         # raises error with no id set - put into context manager as it's
         # an attr, not a callable
-        self.assertTrue(len(token.claims), 2)
+        self.assertEqual(len(token.claims), 3)
         self.assertEqual(token.max, 1)
         self.assertEqual(token.sub, '')
         self.assertIsNone(token.jti)
@@ -66,25 +70,76 @@ class RequestTokenTests(TransactionTestCase):
         # now let's set some properties
         token.user = self.user
         self.assertEqual(token.aud, self.user.id)
-        self.assertTrue(len(token.claims), 3)
+        self.assertEqual(len(token.claims), 4)
+
+        token.login_mode = RequestToken.LOGIN_MODE_REQUEST
+        self.assertEqual(token.claims['mod'], RequestToken.LOGIN_MODE_REQUEST[:1].lower())
+        self.assertEqual(len(token.claims), 4)
 
         now = tz_now()
         now_sec = to_seconds(now)
 
         token.expiration_time = now
         self.assertEqual(token.exp, now_sec)
-        self.assertTrue(len(token.claims), 4)
+        self.assertEqual(len(token.claims), 5)
 
         token.not_before_time = now
         self.assertEqual(token.nbf, now_sec)
-        self.assertEqual(len(token.claims), 5)
+        self.assertEqual(len(token.claims), 6)
 
         # saving updates the id and issued_at timestamp
         with mock.patch('django_jwt.models.tz_now', lambda: now):
             token.save()
             self.assertEqual(token.iat, now_sec)
             self.assertEqual(token.jti, token.id)
-            self.assertEqual(len(token.claims), 7)
+            self.assertEqual(len(token.claims), 8)
+
+    def test_clean(self):
+        token = RequestToken(
+            login_mode=RequestToken.LOGIN_MODE_NONE,
+            # user=self.user
+        )
+        token.clean()
+        # set a user, should now fail validation
+        token.user = self.user
+        self.assertRaises(ValidationError, token.clean)
+
+        # request mode
+        token.login_mode = RequestToken.LOGIN_MODE_REQUEST
+        token.clean()
+        token.user = None
+        self.assertRaises(ValidationError, token.clean)
+
+        def reset_session():
+            """Reset properties so that token passes validation."""
+            token.login_mode = RequestToken.LOGIN_MODE_SESSION
+            token.user = self.user
+            token.issued_at = tz_now()
+            token.expiration_time = token.issued_at + datetime.timedelta(minutes=1)
+            token.max_uses = 1
+
+        def assertValidationFails(field_name):
+            with self.assertRaises(ValidationError) as ctx:
+                token.clean()
+            # print ctx.exception
+            self.assertTrue(field_name in dict(ctx.exception))
+
+        # check the rest_session works!
+        reset_session()
+        token.clean()
+        token.max_uses = 10
+        assertValidationFails('max_uses')
+
+        reset_session()
+        token.user = None
+        assertValidationFails('user')
+
+        reset_session()
+        token.expiration_time = token.issued_at + datetime.timedelta(minutes=100)
+        assertValidationFails('expiration_time')
+
+        token.expiration_time = None
+        assertValidationFails('expiration_time')
 
     def test__validate_max_uses(self):
         token = RequestToken()
@@ -119,7 +174,7 @@ class RequestTokenTests(TransactionTestCase):
         self.assertRaises(InvalidAudienceError, token._validate_request_user, request.user)
 
     def test_validate_request(self):
-        token = RequestToken(user=self.user)
+        token = RequestToken(user=self.user, login_mode='Request')
         factory = RequestFactory()
         request = factory.get('/foo')
         request.user = self.user
@@ -180,7 +235,11 @@ class RequestTokenLogTests(TransactionTestCase):
 
     def setUp(self):
         self.user = get_user_model().objects.create_user('zoidberg')
-        self.token = RequestToken(user=self.user).save()
+        self.token = RequestToken.objects.create_token(
+            scope='foo',
+            user=self.user,
+            login_mode=RequestToken.LOGIN_MODE_REQUEST
+        )
 
     def test_defaults(self):
         log = RequestTokenLog(

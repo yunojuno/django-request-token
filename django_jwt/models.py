@@ -10,6 +10,7 @@ from django.utils.timezone import now as tz_now
 from jwt.exceptions import InvalidAudienceError
 
 from django_jwt.exceptions import MaxUseError
+from django_jwt.settings import JWT_SESSION_TOKEN_EXPIRY
 from django_jwt.utils import to_seconds, encode
 
 
@@ -149,7 +150,8 @@ class RequestToken(models.Model):
         """A dict containing all of the DEFAULT_CLAIMS (where values exist)."""
         claims = {
             'max': self.max_uses,
-            'sub': self.scope
+            'sub': self.scope,
+            'mod': self.login_mode[:1].lower()
         }
         if self.id is not None:
             claims['jti'] = self.id
@@ -165,21 +167,34 @@ class RequestToken(models.Model):
 
     def clean(self):
         """Ensure that login_mode setting is valid."""
-        try:
-            if self.login_mode == self.LOGIN_MODE_NONE:
-                assert self.user is None, u"Anonymous login token has user set.."
-            if self.login_mode == self.LOGIN_MODE_SESSION:
-                assert self.user is not None, u"Session token has no user set."
-                assert self.expiration_time is not None, "Session token has no expiry set."
-                assert self.max_uses == 1, u"Session token is not single-use."
-                assert (
-                    (self.expiration_time - self.issued_at) > datetime.timedelta(minutes=5),
-                    u"Session token expiry time is > 5 mins."
+        if self.login_mode == RequestToken.LOGIN_MODE_NONE:
+            if self.user is not None:
+                raise ValidationError(
+                    {'user': u"User must be None if login_mode is LOGIN_MODE_NONE."}
                 )
-            if self.login_mode == self.LOGIN_MODE_REQUEST:
-                assert self.user is not None, u"Session token has no user set."
-        except AssertionError as ex:
-            raise ValidationError(ex)
+        if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
+            if self.user is None:
+                raise ValidationError(
+                    {'user': u"Session token must have a user."}
+                )
+            if self.max_uses != 1:
+                raise ValidationError(
+                    {'max_uses': u"Session token must have max_use of 1."}
+                )
+            if self.expiration_time is None:
+                raise ValidationError(
+                    {'expiration_time': u"Session token must have an expiration_time."}
+                )
+            interval = self.expiration_time - self.issued_at
+            if interval.seconds / 60 > JWT_SESSION_TOKEN_EXPIRY:
+                raise ValidationError(
+                    {'expiration_time': u"Session token expiry interval is invalid."}
+                )
+        if self.login_mode == RequestToken.LOGIN_MODE_REQUEST:
+            if self.user is None:
+                raise ValidationError(
+                    {'expiration_time': u"Request token must have a user."}
+                )
 
     def save(self, *args, **kwargs):
         self.clean()

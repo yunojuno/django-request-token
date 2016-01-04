@@ -97,7 +97,11 @@ class DecoratorTests(TransactionTestCase):
 
     def test_valid_token_with_user(self):
         user = get_user_model().objects.create_user('zoidberg')
-        token = RequestToken.objects.create_token(scope="foo", user=user)
+        token = RequestToken.objects.create_token(
+            scope="foo",
+            user=user,
+            login_mode=RequestToken.LOGIN_MODE_REQUEST
+        )
         # we're sending the request anonymously, but we have a valid
         # token, so we _should_ get the function run as the user.
         request = self._request('/', token.jwt(), AnonymousUser())
@@ -111,7 +115,11 @@ class DecoratorTests(TransactionTestCase):
     def test_valid_token_with_wrong_user(self):
         user1 = get_user_model().objects.create_user('zoidberg', password='secret')
         user2 = get_user_model().objects.create_user('fry', password='secret')
-        token = RequestToken.objects.create_token(scope="foo", user=user1)
+        token = RequestToken.objects.create_token(
+            scope="foo",
+            user=user1,
+            login_mode=RequestToken.LOGIN_MODE_REQUEST
+        )
         request = self._request('/', token.jwt(), user2)
         self._assertResponse(
             request,
