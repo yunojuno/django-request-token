@@ -7,7 +7,5 @@ admin.autodiscover()
 urlpatterns = patterns(
     '',
     url(r'^admin/', include(admin.site.urls)),
-    # url(r'^nps/', include('net_promoter_score.urls',
-    #     namespace="net_promoter_score")),
-    # url(r'^static/(?P<path>.*)$', staticfiles.views.serve),
+    url(r'^testing/', include('test_app.urls', namespace="testing")),
 )
