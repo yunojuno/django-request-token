@@ -5,7 +5,8 @@ import mock
 
 from jwt.exceptions import InvalidAudienceError
 
-from django.contrib.auth import get_user_model
+from django.contrib.sessions.middleware import SessionMiddleware
+from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
@@ -15,7 +16,7 @@ from django.utils.timezone import now as tz_now
 
 from django_jwt.models import RequestToken, RequestTokenLog
 from django_jwt.exceptions import MaxUseError
-from django_jwt.utils import to_seconds
+from django_jwt.utils import to_seconds, decode
 
 
 class RequestTokenTests(TransactionTestCase):
@@ -121,7 +122,6 @@ class RequestTokenTests(TransactionTestCase):
         def assertValidationFails(field_name):
             with self.assertRaises(ValidationError) as ctx:
                 token.clean()
-            # print ctx.exception
             self.assertTrue(field_name in dict(ctx.exception))
 
         # check the rest_session works!
@@ -140,46 +140,6 @@ class RequestTokenTests(TransactionTestCase):
 
         token.expiration_time = None
         assertValidationFails('expiration_time')
-
-    def test__validate_max_uses(self):
-        token = RequestToken()
-        token._validate_max_uses()
-        token.used_to_date = token.max_uses
-        self.assertRaises(MaxUseError, token._validate_max_uses)
-        token.used_to_date = token.max_uses + 1
-        self.assertRaises(MaxUseError, token._validate_max_uses)
-
-    def test__validate_request_user(self):
-        # token user is None
-        token = RequestToken()
-        factory = RequestFactory()
-        request = factory.get('/foo')
-
-        # user is unchanged as we don't specify a token.user
-        anon = AnonymousUser()
-        request.user = anon
-        token._validate_request_user(request.user)
-
-        # authenticated user, but no token user, so should pass through
-        token.user = self.user
-        token._validate_request_user(request.user)
-
-        # authenticated user that matches the token - OK
-        request.user = self.user
-        token._validate_request_user(request.user)
-
-        # authenticated user that does not match the token - FAIL
-        wrong_user = get_user_model().objects.create_user(username="Finbar")
-        request.user = wrong_user
-        self.assertRaises(InvalidAudienceError, token._validate_request_user, request.user)
-
-    def test_validate_request(self):
-        token = RequestToken(user=self.user, login_mode='Request')
-        factory = RequestFactory()
-        request = factory.get('/foo')
-        request.user = self.user
-        token.validate_request(request)
-        self.assertEqual(request.user, token.user)
 
     def test_log(self):
         token = RequestToken().save()
@@ -217,6 +177,108 @@ class RequestTokenTests(TransactionTestCase):
         self.assertEqual(log.user_agent, 'test_agent')
         token.refresh_from_db(fields=['used_to_date'])
         assertUsedToDate(4)
+
+    def test_jwt(self):
+        token = RequestToken(id=1, scope='foo').save()
+        jwt = token.jwt()
+        self.assertEqual(decode(jwt), token.claims)
+
+    def test_validate_max_uses(self):
+        token = RequestToken(max_uses=1, used_to_date=0)
+        token.validate_max_uses()
+        token.used_to_date = token.max_uses
+        self.assertRaises(MaxUseError, token.validate_max_uses)
+
+    def test__auth_is_anonymous(self):
+        factory = RequestFactory()
+        middleware = SessionMiddleware()
+        anon = AnonymousUser()
+        request = factory.get('/foo')
+        middleware.process_request(request)
+        request.user = anon
+
+        # try default token
+        token = RequestToken.objects.create_token(
+            scope="foo",
+            max_uses=10,
+            login_mode=RequestToken.LOGIN_MODE_NONE
+        )
+        request = token._auth_is_anonymous(request)
+        self.assertEqual(request.user, anon)
+
+        # try request token
+        user1 = get_user_model().objects.create_user(username="Finbar")
+        token = RequestToken.objects.create_token(
+            user=user1,
+            scope="foo",
+            max_uses=10,
+            login_mode=RequestToken.LOGIN_MODE_REQUEST
+        )
+        token._auth_is_anonymous(request)
+        self.assertEqual(request.user, user1)
+        self.assertFalse(hasattr(token.user, 'backend'))
+
+        # try a session token
+        logout(request)
+        request.user = anon
+        token.login_mode = RequestToken.LOGIN_MODE_SESSION
+        request = token._auth_is_anonymous(request)
+        self.assertEqual(request.user, user1)
+        self.assertEqual(token.user.backend, 'django.contrib.auth.backends.ModelBackend')
+
+    def test__auth_is_authenticated(self):
+        factory = RequestFactory()
+        middleware = SessionMiddleware()
+        request = factory.get('/foo')
+        middleware.process_request(request)
+        user1 = get_user_model().objects.create_user(username="Jekyll")
+        request.user = user1
+
+        # try default token
+        token = RequestToken.objects.create_token(
+            scope="foo",
+            max_uses=10,
+            login_mode=RequestToken.LOGIN_MODE_NONE
+        )
+        request = token._auth_is_authenticated(request)
+        self.assertEqual(request.user, user1)
+
+        # try request token
+        token = RequestToken.objects.create_token(
+            user=user1,
+            scope="foo",
+            max_uses=10,
+            login_mode=RequestToken.LOGIN_MODE_REQUEST
+        )
+        request = token._auth_is_authenticated(request)
+
+        token.login_mode = RequestToken.LOGIN_MODE_SESSION
+        request = token._auth_is_authenticated(request)
+        self.assertEqual(request.user, user1)
+
+        token.user = get_user_model().objects.create_user(username="Hyde")
+        self.assertRaises(InvalidAudienceError, token._auth_is_authenticated, request)
+
+    def test_authenticate(self):
+        factory = RequestFactory()
+        middleware = SessionMiddleware()
+        anon = AnonymousUser()
+        request = factory.get('/foo')
+        middleware.process_request(request)
+        request.user = anon
+
+        user1 = get_user_model().objects.create_user(username="Finbar")
+        token = RequestToken.objects.create_token(
+            user=user1,
+            scope="foo",
+            max_uses=10,
+            login_mode=RequestToken.LOGIN_MODE_REQUEST
+        )
+        token.authenticate(request)
+        self.assertEqual(request.user, user1)
+
+        request.user = get_user_model().objects.create_user(username="Hyde")
+        self.assertRaises(InvalidAudienceError, token.authenticate, request)
 
 
 class RequestTokenQuerySetTests(TransactionTestCase):

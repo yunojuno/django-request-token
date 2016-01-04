@@ -62,10 +62,10 @@ class MiddlewareTests(TransactionTestCase):
             return request
 
         # has a valid token
-        token = RequestToken(id=1, scope="foo")
+        token = RequestToken.objects.create_token(scope="foo")
         request = new_request(token.jwt())
         self.assertIsNone(self.middleware.process_request(request))
-        self.assertEqual(request.token_payload, token.claims)
+        self.assertEqual(request.token, token)
 
     def test_process_request_not_allowed(self):
 

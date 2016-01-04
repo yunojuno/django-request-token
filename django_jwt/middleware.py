@@ -2,10 +2,13 @@
 """django_jwt middleware."""
 import logging
 
+from django.contrib.auth import login
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
 
-from jwt.exceptions import InvalidTokenError
+from jwt.exceptions import InvalidTokenError, InvalidAudienceError
 
+# from django_jwt.exceptions import MaxUseError
+from django_jwt.models import RequestToken
 from django_jwt.settings import JWT_QUERYSTRING_ARG
 from django_jwt.utils import decode
 
@@ -57,10 +60,19 @@ class RequestTokenMiddleware(object):
             return HttpResponseNotAllowed(['GET'])
 
         try:
-            request.token_payload = decode(token)
-        except InvalidTokenError as ex:
+            payload = decode(token)
+            token = RequestToken.objects.get(id=payload['jti'])
+            token.validate_max_uses()
+            token.authenticate(request)
+            request.token = token
+
+        except (RequestToken.DoesNotExist, InvalidTokenError) as ex:
             key = request.session.session_key
-            logger.warning("JWT token error (error code:'%s'): %s", key, ex)
-            response = HttpResponseForbidden("Temporary link token error (code: %s)" % key)
+            logger.warning(
+                "JWT token error (error code:'%s'): %s", key, ex
+            )
+            response = HttpResponseForbidden(
+                u"Temporary link token error (code: %s)" % key
+            )
             response.error = ex
             return response

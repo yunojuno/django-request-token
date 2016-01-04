@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """django_jwt models."""
-import datetime
+# import datetime
+import logging
 
+from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
@@ -12,6 +14,8 @@ from jwt.exceptions import InvalidAudienceError
 from django_jwt.exceptions import MaxUseError
 from django_jwt.settings import JWT_SESSION_TOKEN_EXPIRY
 from django_jwt.utils import to_seconds, encode
+
+logger = logging.getLogger(__name__)
 
 
 class RequestTokenQuerySet(models.query.QuerySet):
@@ -197,9 +201,9 @@ class RequestToken(models.Model):
                 )
 
     def save(self, *args, **kwargs):
-        self.clean()
         if 'update_fields' not in kwargs:
             self.issued_at = self.issued_at or tz_now()
+        self.clean()
         super(RequestToken, self).save(*args, **kwargs)
         return self
 
@@ -207,48 +211,70 @@ class RequestToken(models.Model):
         """Encode the token claims into a JWT."""
         return encode(self.claims)
 
-    def validate_request(self, request):
-        """Validate token against the incoming request.
+    def validate_max_uses(self):
+        """Check the token max_uses is still valid.
 
-        This method checks the current token hasn't exceeded
-        the usage count, that the request is valid (target_url, user).
-
-        It may raise any of the following errors:
-
-            # TargetUrlError
-            MaxUseError
-            InvalidAudienceError
-
-        """
-        self._validate_max_uses()
-        self._validate_request_user(request.user)
-
-    def _validate_max_uses(self):
-        """Check that we haven't exceeded the max_uses value.
-
-        Raise MaxUseError if we have overshot the value.
+        Raises MaxUseError if invalid.
 
         """
         if self.used_to_date >= self.max_uses:
-            raise MaxUseError("RequestToken [%s] has exceeded max uses" % self.id)
+            raise MaxUseError(
+                u"RequestToken [%s] has exceeded max uses" % self.id
+            )
 
-    def _validate_request_user(self, user):
-        """Validate and set the request.user from object user.
+    def _auth_is_anonymous(self, request):
+        """Authenticate anonymous requests."""
+        assert request.user.is_anonymous(), u"User is authenticated."
 
-        If the object has a user set, then it must match the request.user,
-        and if it doesn't we raise an InvalidAudienceError.
+        if self.login_mode == RequestToken.LOGIN_MODE_NONE:
+            pass
+
+        if self.login_mode == RequestToken.LOGIN_MODE_REQUEST:
+            logger.debug(
+                u"Setting request.user to %r from token %i.",
+                self.user, self.id
+            )
+            request.user = self.user
+
+        if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
+            logger.debug(
+                u"Authenticating request.user as %r from token %i.",
+                self.user, self.id
+            )
+            # I _think_ we can get away with this as we are pulling the
+            # user out of the DB, and we are explicitly authenticating
+            # the user.
+            self.user.backend = 'django.contrib.auth.backends.ModelBackend'
+            login(request, self.user)
+
+        return request
+
+    def _auth_is_authenticated(self, request):
+        """Authenticate requests with existing users."""
+        assert request.user.is_authenticated(), u"User is anonymous."
+
+        if self.login_mode == RequestToken.LOGIN_MODE_NONE:
+            return request
+
+        if request.user == self.user:
+            return request
+
+        raise InvalidAudienceError(
+            "RequestToken [%i] audience mismatch: '%s' != '%s'" %
+            (self.id, request.user, self.user)
+        )
+
+    def authenticate(self, request):
+        """Authenticate an HttpRequest with the token user.
+
+        This method encapsulates the request handling - if the token
+        has a user assigned, then this will be added to the request.
 
         """
-        if self.user is None:
-            return
-        # we have an authenticated user that does *not* match the user
-        # we are expecting, so bomb out here.
-        if user.is_authenticated() and user != self.user:
-            raise InvalidAudienceError(
-                "RequestToken [%s] audience mismatch: '%s' != '%s'" % (
-                    self.id, user, self.user
-                )
-            )
+        if request.user.is_anonymous():
+            return self._auth_is_anonymous(request)
+        else:
+            return self._auth_is_authenticated(request)
 
     @transaction.atomic
     def log(self, request, response):

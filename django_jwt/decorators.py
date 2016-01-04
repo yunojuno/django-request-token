@@ -8,7 +8,7 @@ from django.http import HttpResponseForbidden
 from jwt.exceptions import InvalidTokenError
 
 from django_jwt.exceptions import ScopeError, TokenNotFoundError
-from django_jwt.models import RequestToken
+# from django_jwt.models import RequestToken
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ def use_request_token(view_func=None, scope=None, required=False):
     https://blogs.it.ox.ac.uk/inapickle/2012/01/05/python-decorators-with-optional-arguments/
 
     """
-    assert scope not in ('', None), "@expiring_link decorator scope cannot be empty."
+    assert scope not in ('', None), "Decorator scope cannot be empty."
 
     if view_func is None:
         return functools.partial(use_request_token, scope=scope, required=required)
@@ -64,34 +64,25 @@ def use_request_token(view_func=None, scope=None, required=False):
     @functools.wraps(view_func)
     def inner(request, *args, **kwargs):
 
-        payload = getattr(request, 'token_payload', None)
-        if payload is None:
-            if required is True:
-                return respond_to_error(request.session.session_key, TokenNotFoundError())
-            else:
-                return view_func(request, *args, **kwargs)
-
+        token = getattr(request, 'token', None)
         try:
-            subject = payload['sub']
-            if subject != scope:
-                raise ScopeError(
-                    "RequestToken scope mismatch: '%s' != '%s'" %
-                    (subject, scope)
-                )
-            # raises standard DoesNotExist exception if not found
-            token_id = payload['jti']
-            token = RequestToken.objects.get(id=token_id)
-            # raises MaxUseError, InvalidAudienceError
-            token.validate_request(request)
-            # JWT hsa been verified, and token checks out, so set the user
-            request.token = token
-            if token.user is not None:
-                request.user = token.user
-            response = view_func(request, *args, **kwargs)
-            token.log(request, response)
-            return response
+            if token is None:
+                if required is True:
+                    raise TokenNotFoundError()
+                else:
+                    return view_func(request, *args, **kwargs)
+            else:
+                if token.scope == scope:
+                    response = view_func(request, *args, **kwargs)
+                    token.log(request, response)
+                    return response
+                else:
+                    raise ScopeError(
+                        "RequestToken scope mismatch: '%s' != '%s'" %
+                        (token.scope, scope)
+                    )
 
-        except (RequestToken.DoesNotExist, InvalidTokenError) as ex:
+        except InvalidTokenError as ex:
             # this will log the exception and return a 403
             return respond_to_error(request.session.session_key, ex)
 
