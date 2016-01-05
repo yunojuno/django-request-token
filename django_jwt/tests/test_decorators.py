@@ -78,3 +78,4 @@ class DecoratorTests(TransactionTestCase):
         response = test_view_func(request)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(RequestTokenLog.objects.exists())
+

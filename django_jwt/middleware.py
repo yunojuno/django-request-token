@@ -2,12 +2,10 @@
 """django_jwt middleware."""
 import logging
 
-from django.contrib.auth import login
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
 
-from jwt.exceptions import InvalidTokenError, InvalidAudienceError
+from jwt.exceptions import InvalidTokenError
 
-# from django_jwt.exceptions import MaxUseError
 from django_jwt.models import RequestToken
 from django_jwt.settings import JWT_QUERYSTRING_ARG
 from django_jwt.utils import decode

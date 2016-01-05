@@ -99,3 +99,9 @@ class MiddlewareTests(TransactionTestCase):
         self.assertIsInstance(response.error, exceptions.DecodeError)
         self.assertEqual(response.status_code, 403)
         self.assertFalse(hasattr(request, 'token_payload'))
+
+
+# class IntegrationTests(TransactionTestCase):
+
+#     """Test the end-to-end process."""
+

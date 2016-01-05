@@ -9,14 +9,14 @@ README = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
-    name="django-jwt-expiringlinks",
-    version="0.1.0-dev2",
+    name="django-request-token",
+    version="0.2.0-dev",
     packages=find_packages(),
     install_requires=['Django>=1.8', 'pyjwt'],
     include_package_data=True,
-    description='Django app that uses JWT to manage one-time and expiring links to protected URLs.',
+    description='JWT-backed Django app for managing querystring tokens.',
     long_description=README,
-    url='https://github.com/yunojuno/django-jwt-expiringlinks',
+    url='https://github.com/yunojuno/django-request-token',
     author='Hugo Rodger-Brown',
     author_email='hugo@yunojuno.com',
     maintainer='Hugo Rodger-Brown',

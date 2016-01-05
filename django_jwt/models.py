@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """django_jwt models."""
-# import datetime
 import logging
 
 from django.contrib.auth import login
@@ -58,6 +57,7 @@ class RequestToken(models.Model):
     JWT spec: https://tools.ietf.org/html/rfc7519
 
     """
+
     # do not login the user on the request
     LOGIN_MODE_NONE = 'None'
     # login the user, but only for the original request
@@ -192,7 +192,12 @@ class RequestToken(models.Model):
             interval = self.expiration_time - self.issued_at
             if interval.seconds / 60 > JWT_SESSION_TOKEN_EXPIRY:
                 raise ValidationError(
-                    {'expiration_time': u"Session token expiry interval is invalid."}
+                    {
+                        'expiration_time': (
+                            u"Session token expiry interval is invalid: %ss > %sm" %
+                            (interval, JWT_SESSION_TOKEN_EXPIRY)
+                        )
+                    }
                 )
         if self.login_mode == RequestToken.LOGIN_MODE_REQUEST:
             if self.user is None:
