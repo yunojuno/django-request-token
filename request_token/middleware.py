@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
-"""django_jwt middleware."""
+"""request_token middleware."""
 import logging
 
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
 
 from jwt.exceptions import InvalidTokenError
 
-from django_jwt.models import RequestToken
-from django_jwt.settings import JWT_QUERYSTRING_ARG
-from django_jwt.utils import decode
+from request_token.models import RequestToken
+from request_token.settings import JWT_QUERYSTRING_ARG
+from request_token.utils import decode
 
 logger = logging.getLogger(__name__)
 

@@ -7,7 +7,7 @@ from django.db import models, migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('django_jwt', '0003_auto_20151229_1105'),
+        ('request_token', '0003_auto_20151229_1105'),
     ]
 
     operations = [

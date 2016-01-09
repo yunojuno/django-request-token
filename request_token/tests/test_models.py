@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""django_jwt model tests."""
+"""request_token model tests."""
 import datetime
 import mock
 
@@ -14,10 +14,10 @@ from django.http import HttpResponse
 from django.test import TransactionTestCase, RequestFactory
 from django.utils.timezone import now as tz_now
 
-from django_jwt.models import RequestToken, RequestTokenLog
-from django_jwt.exceptions import MaxUseError
-from django_jwt.settings import JWT_SESSION_TOKEN_EXPIRY
-from django_jwt.utils import to_seconds, decode
+from request_token.models import RequestToken, RequestTokenLog
+from request_token.exceptions import MaxUseError
+from request_token.settings import JWT_SESSION_TOKEN_EXPIRY
+from request_token.utils import to_seconds, decode
 
 
 class RequestTokenTests(TransactionTestCase):
@@ -58,7 +58,7 @@ class RequestTokenTests(TransactionTestCase):
 
         now = tz_now()
         expires = now + datetime.timedelta(minutes=JWT_SESSION_TOKEN_EXPIRY)
-        with mock.patch('django_jwt.models.tz_now', lambda: now):
+        with mock.patch('request_token.models.tz_now', lambda: now):
             token = RequestToken(
                 login_mode=RequestToken.LOGIN_MODE_SESSION,
                 user=self.user,
@@ -104,7 +104,7 @@ class RequestTokenTests(TransactionTestCase):
         self.assertEqual(len(token.claims), 6)
 
         # saving updates the id and issued_at timestamp
-        with mock.patch('django_jwt.models.tz_now', lambda: now):
+        with mock.patch('request_token.models.tz_now', lambda: now):
             token.save()
             self.assertEqual(token.iat, now_sec)
             self.assertEqual(token.jti, token.id)

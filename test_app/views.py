@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 from django.http import HttpResponse
-from django_jwt.decorators import use_request_token
+
+from request_token.decorators import use_request_token
 
 
 def undecorated(request):

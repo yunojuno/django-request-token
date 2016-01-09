@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""django_jwt decorators."""
+"""request_token decorators."""
 import functools
 import logging
 
@@ -7,7 +7,7 @@ from django.http import HttpResponseForbidden
 
 from jwt.exceptions import InvalidTokenError
 
-from django_jwt.exceptions import ScopeError, TokenNotFoundError
+from request_token.exceptions import ScopeError, TokenNotFoundError
 
 logger = logging.getLogger(__name__)
 

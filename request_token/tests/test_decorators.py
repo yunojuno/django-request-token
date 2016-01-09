@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
-"""django_jwt decorator tests."""
+"""request_token decorator tests."""
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse, HttpResponseForbidden
 from django.test import TransactionTestCase, RequestFactory
 
-from django_jwt.decorators import use_request_token, respond_to_error
-from django_jwt.exceptions import ScopeError, TokenNotFoundError
-from django_jwt.models import RequestToken, RequestTokenLog
-from django_jwt.settings import JWT_QUERYSTRING_ARG
-from django_jwt.middleware import RequestTokenMiddleware
+from request_token.decorators import use_request_token, respond_to_error
+from request_token.exceptions import ScopeError, TokenNotFoundError
+from request_token.models import RequestToken, RequestTokenLog
+from request_token.settings import JWT_QUERYSTRING_ARG
+from request_token.middleware import RequestTokenMiddleware
 
 
 @use_request_token(scope="foo")

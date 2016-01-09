@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""django_jwt decorator tests."""
+"""request_token decorator tests."""
 from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
@@ -7,8 +7,8 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.urlresolvers import reverse
 from django.test import TransactionTestCase, Client
 
-from django_jwt.models import RequestToken, RequestTokenLog
-from django_jwt.settings import JWT_QUERYSTRING_ARG, JWT_SESSION_TOKEN_EXPIRY
+from request_token.models import RequestToken, RequestTokenLog
+from request_token.settings import JWT_QUERYSTRING_ARG, JWT_SESSION_TOKEN_EXPIRY
 
 
 def get_url(url_name, token):

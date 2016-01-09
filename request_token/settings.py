@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""django_jwt settings."""
+"""request_token settings."""
 from django.conf import settings
 
 # the name of GET argument to contain the token

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""django_jwt default test settings."""
+"""request_token default test settings."""
 DEBUG = True
 
 DATABASES = {
@@ -17,7 +17,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.staticfiles',
-    'django_jwt',
+    'request_token',
     'test_app'
 )
 
@@ -27,10 +27,10 @@ MIDDLEWARE_CLASSES = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django_jwt.middleware.RequestTokenMiddleware',
+    'request_token.middleware.RequestTokenMiddleware',
 ]
 
-SECRET_KEY = "django_jwt"
+SECRET_KEY = "request_token"
 
 ROOT_URLCONF = 'urls'
 
@@ -65,7 +65,7 @@ LOGGING = {
         },
     },
     'loggers': {
-        'django_jwt': {
+        'request_token': {
             'handlers': ['console'],
             'level': 'DEBUG',
         }

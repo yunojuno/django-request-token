@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""django_jwt package setup."""
+"""request_token package setup."""
 import os
 from setuptools import setup, find_packages
 
@@ -10,7 +10,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name="django-request-token",
-    version="0.2.0-dev",
+    version="0.1.0",
     packages=find_packages(),
     install_requires=['Django>=1.8', 'pyjwt'],
     include_package_data=True,

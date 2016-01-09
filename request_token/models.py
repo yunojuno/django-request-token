@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""django_jwt models."""
+"""request_token models."""
 import datetime
 import logging
 
@@ -11,9 +11,9 @@ from django.utils.timezone import now as tz_now
 
 from jwt.exceptions import InvalidAudienceError
 
-from django_jwt.exceptions import MaxUseError
-from django_jwt.settings import JWT_SESSION_TOKEN_EXPIRY
-from django_jwt.utils import to_seconds, encode
+from request_token.exceptions import MaxUseError
+from request_token.settings import JWT_SESSION_TOKEN_EXPIRY
+from request_token.utils import to_seconds, encode
 
 logger = logging.getLogger(__name__)
 

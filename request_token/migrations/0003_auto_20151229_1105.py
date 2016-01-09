@@ -8,7 +8,7 @@ from django.conf import settings
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('django_jwt', '0002_auto_20151227_1428'),
+        ('request_token', '0002_auto_20151227_1428'),
     ]
 
     operations = [

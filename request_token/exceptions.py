@@ -1,5 +1,5 @@
 # -*- coding: utf8 -*-
-"""django_jwt expections.
+"""request_token expections.
 
 Local exceptions related to tokens inherit from the PyJWT base
 InvalidTokenError.

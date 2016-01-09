@@ -33,7 +33,7 @@ class Migration(migrations.Migration):
                 ('user_agent', models.TextField(help_text=b'User-agent of client used to make the request.', blank=True)),
                 ('client_ip', models.CharField(help_text=b'Client IP of device used to make the request.', max_length=15)),
                 ('timestamp', models.DateTimeField(help_text=b'Time the request was logged.')),
-                ('token', models.ForeignKey(help_text=b'The RequestToken that was used.', to='django_jwt.RequestToken')),
+                ('token', models.ForeignKey(help_text=b'The RequestToken that was used.', to='request_token.RequestToken')),
                 ('user', models.ForeignKey(blank=True, to=settings.AUTH_USER_MODEL, help_text=b'The user who made the request (None if anonymous).', null=True)),
             ],
         ),

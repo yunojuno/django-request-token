@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""django_jwt admin models."""
+"""request_token admin models."""
 import datetime
 import json
 
@@ -7,7 +7,7 @@ from django.contrib import admin
 from django.utils.safestring import mark_safe
 from django.utils.timezone import now as tz_now
 
-from django_jwt.models import RequestToken
+from request_token.models import RequestToken
 
 
 def pretty_print(data):

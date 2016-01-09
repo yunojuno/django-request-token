@@ -7,7 +7,7 @@ from django.db import models, migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('django_jwt', '0004_remove_requesttoken_target_url'),
+        ('request_token', '0004_remove_requesttoken_target_url'),
     ]
 
     operations = [
