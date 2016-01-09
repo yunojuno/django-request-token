@@ -16,6 +16,7 @@ from django.utils.timezone import now as tz_now
 
 from django_jwt.models import RequestToken, RequestTokenLog
 from django_jwt.exceptions import MaxUseError
+from django_jwt.settings import JWT_SESSION_TOKEN_EXPIRY
 from django_jwt.utils import to_seconds, decode
 
 
@@ -54,6 +55,20 @@ class RequestTokenTests(TransactionTestCase):
         token.issued_at = None
         token = token.save(update_fields=['issued_at'])
         self.assertIsNone(token.issued_at)
+
+        now = tz_now()
+        expires = now + datetime.timedelta(minutes=JWT_SESSION_TOKEN_EXPIRY)
+        with mock.patch('django_jwt.models.tz_now', lambda: now):
+            token = RequestToken(
+                login_mode=RequestToken.LOGIN_MODE_SESSION,
+                user=self.user,
+                scope="foo"
+            )
+            self.assertIsNone(token.issued_at)
+            self.assertIsNone(token.expiration_time)
+            token.save()
+            self.assertEqual(token.issued_at, now)
+            self.assertEqual(token.expiration_time, expires)
 
     def test_claims(self):
         token = RequestToken()
@@ -135,9 +150,6 @@ class RequestTokenTests(TransactionTestCase):
         assertValidationFails('user')
 
         reset_session()
-        token.expiration_time = token.issued_at + datetime.timedelta(minutes=100)
-        assertValidationFails('expiration_time')
-
         token.expiration_time = None
         assertValidationFails('expiration_time')
 

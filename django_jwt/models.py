@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """django_jwt models."""
+import datetime
 import logging
 
 from django.contrib.auth import login
@@ -114,6 +115,16 @@ class RequestToken(models.Model):
 
     objects = RequestTokenQuerySet.as_manager()
 
+    def __unicode__(self):
+        return u"Request token #%s" % (self.id)
+
+    def __str__(self):
+        return unicode(self).encode('utf-8')
+
+    def __repr__(self):
+        return u"<RequestToken id=%s scope=%s login_mode='%s'>" %(
+            self.id, self.scope, self.login_mode)
+
     @property
     def aud(self):
         """The 'aud' claim, maps to user.id."""
@@ -189,16 +200,6 @@ class RequestToken(models.Model):
                 raise ValidationError(
                     {'expiration_time': u"Session token must have an expiration_time."}
                 )
-            interval = self.expiration_time - self.issued_at
-            if interval.seconds / 60 > JWT_SESSION_TOKEN_EXPIRY:
-                raise ValidationError(
-                    {
-                        'expiration_time': (
-                            u"Session token expiry interval is invalid: %ss > %sm" %
-                            (interval, JWT_SESSION_TOKEN_EXPIRY)
-                        )
-                    }
-                )
         if self.login_mode == RequestToken.LOGIN_MODE_REQUEST:
             if self.user is None:
                 raise ValidationError(
@@ -208,6 +209,11 @@ class RequestToken(models.Model):
     def save(self, *args, **kwargs):
         if 'update_fields' not in kwargs:
             self.issued_at = self.issued_at or tz_now()
+            if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
+                self.expiration_time = self.expiration_time or (
+                    self.issued_at +
+                    datetime.timedelta(minutes=JWT_SESSION_TOKEN_EXPIRY)
+                )
         self.clean()
         super(RequestToken, self).save(*args, **kwargs)
         return self
@@ -350,6 +356,19 @@ class RequestTokenLog(models.Model):
         blank=True,
         help_text="Time the request was logged."
     )
+
+    def __unicode__(self):
+        if self.user is None:
+            return u"%s used %s" % (self.token, self.timestamp)
+        else:
+            return u"%s used by %s at %s" % (self.token, self.user, self.timestamp)
+
+    def __str__(self):
+        return unicode(self).encode('utf-8')
+
+    def __repr__(self):
+        return u"<RequestTokenLog id=%s token=%s timestamp='%s'>" %(
+            self.id, self.token.id, self.timestamp)
 
     def save(self, *args, **kwargs):
         if 'update_fields' not in kwargs:
