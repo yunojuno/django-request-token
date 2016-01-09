@@ -39,23 +39,29 @@ class RequestTokenAdmin(admin.ModelAdmin):
     )
     readonly_fields = ('pretty_payload', 'jwt', 'issued_at')
     search_fields = ('user__first_name', 'user__username')
+    raw_id_fields = ('user',)
 
     def pretty_payload(self, obj):
         return pretty_print(obj.claims)
     pretty_payload.short_description = "Payload"
 
     def jwt(self, obj):
-        return obj.encode()
+        try:
+            return obj.jwt()
+        except:
+            return None
     jwt.short_description = "JWT"
 
     def is_valid(self, obj):
         """Validate the time window and usage."""
         now = tz_now()
-        return (
-            (now > (obj.not_before_time or datetime.datetime.min)) and
-            (now < (obj.expiration_time or datetime.datetime.max)) and
-            (obj.used_to_date < obj.max_uses)
-        )
+        if obj.not_before_time and obj.not_before_time > now:
+            return False
+        if obj.expiration_time and obj.expiration_time < now:
+            return False
+        if obj.used_to_date >= obj.max_uses:
+            return False
+        return True
     is_valid.boolean = True
 
 
