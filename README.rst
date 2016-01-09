@@ -65,6 +65,26 @@ that renders the standard template with additional information extracted from
 the token - e.g. the name of the affiliate, or the person who invited you to
 register.
 
+.. code:: python
+
+    # a token that can be used to access a public url, without authenticating
+    # as a user, but carrying a payload (affiliate_id).
+    token = RequestToken.objects.create_token(
+        scope="foo",
+        login_mode=RequestToken.LOGIN_MODE_NONE,
+        max_uses=10,
+        data={
+            'affiliate_id': 1
+        }
+    )
+
+    ...
+
+    @use_request_token(scope="foo", required=True)
+    function view_func(request):
+        # we know we have a token as required is True
+        affiliate_id = request.token.data['affiliate_id']
+
 **Single Request** (``RequestToken.LOGIN_MODE_REQUEST``)
 
 In Request mode, the request.user property is overridden by the user specified
@@ -73,6 +93,22 @@ a single action (e.g. RSVP, unsubscribe). If the user then navigates onto anothe
 page on the site, they will not be authenticated. If the user is already
 authenticated, but as a different user to the one in the token, then they will
 receive a 403 response.
+
+.. code:: python
+
+    # this token will identify the request.user as a given user, but only for
+    # a single request - not the entire session.
+    token = RequestToken.objects.create_token(
+        scope="foo",
+        login_mode=RequestToken.LOGIN_MODE_REQUEST,
+        user=User.objects.get(username="hugo")
+    )
+
+    ...
+
+    @use_request_token(scope="foo")
+    function view_func(request):
+        assert request.user == User.objects.get(username="hugo")
 
 **Auto-login** (``RequestToken.LOGIN_MODE_SESSION``)
 
@@ -84,6 +120,16 @@ on medium.com, which takes an email address (no password) and sends out a login
 link.
 
 Session tokens must be single-use, and have a fixed expiry of one minute.
+
+.. code:: python
+
+    # this token will log in as the given user for the entire session -
+    # NB use with caution.
+    token = RequestToken.objects.create_token(
+        scope="foo",
+        login_mode=RequestToken.LOGIN_MODE_SESSION,
+        user=User.objects.get(username="hugo")
+    )
 
 Implementation
 ==============
