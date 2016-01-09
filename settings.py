@@ -38,7 +38,7 @@ APPEND_SLASH = True
 
 STATIC_URL = '/static/'
 
-TIME_ZONE = 'utc'
+TIME_ZONE = 'UTC'
 
 SITE_ID = 1
 
