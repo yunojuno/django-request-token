@@ -4,7 +4,7 @@
 django-request-token
 --------------------
 
-Django app that uses JWT to manage one-time and expiring tokens to protected URLs.
+Django app that uses JWT to manage one-time and expiring tokens to protect URLs.
 
 Background
 ==========
@@ -272,10 +272,8 @@ MIT
 Contributing
 ============
 
-This is by no means complete - it can't cope with requirements that are anything other than '==',
-and it doesn't (yet) help with updating the requirements file itself. However, it's good enough to
-be of value, hence releasing it. If you would like to contribute to the project, usual Github rules
-apply:
+This is by no means complete, however, it's good enough to be of value, hence releasing it.
+If you would like to contribute to the project, usual Github rules apply:
 
 1. Fork the repo to your own account
 2. Submit a pull request
