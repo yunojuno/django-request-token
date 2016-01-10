@@ -1,5 +1,5 @@
-.. image:: https://travis-ci.org/yunojuno/django-expiring-links.svg
-    :target: https://travis-ci.org/yunojuno/django-expiring-links
+.. image:: https://travis-ci.org/yunojuno/django-request-token.svg
+    :target: https://travis-ci.org/yunojuno/django-request-token
 
 django-request-token
 --------------------
