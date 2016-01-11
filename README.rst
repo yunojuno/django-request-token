@@ -59,7 +59,7 @@ the ``login_mode`` attribute of a request token:
 **Public Link** (``RequestToken.LOGIN_MODE_NONE``)
 
 In this mode (the default for a new token), there is no authentication, and no
-assigned user ('aud' claim). The token is used as a mechanism for attaching a payload
+assigned user. The token is used as a mechanism for attaching a payload
 to the link. An example of this might be a custom registration or affiliate link,
 that renders the standard template with additional information extracted from
 the token - e.g. the name of the affiliate, or the person who invited you to
@@ -72,7 +72,6 @@ register.
     token = RequestToken.objects.create_token(
         scope="foo",
         login_mode=RequestToken.LOGIN_MODE_NONE,
-        max_uses=10,
         data={
             'affiliate_id': 1
         }
@@ -80,10 +79,15 @@ register.
 
     ...
 
-    @use_request_token(scope="foo", required=True)
+    @use_request_token(scope="foo")
     function view_func(request):
-        # we know we have a token as required is True
-        affiliate_id = request.token.data['affiliate_id']
+        # extract the affiliate id from an token _if_ one is supplied
+        affiliate_id = (
+            request.token.data['affiliate_id']
+            if hasattr(request, 'token')
+            else None
+        )
+
 
 **Single Request** (``RequestToken.LOGIN_MODE_REQUEST``)
 
@@ -143,16 +147,49 @@ Step 1 is to create a ``RequestToken`` - this has various attributes that can
 be used to modify its behaviour, and mandatory property - ``scope``. This is a
 text value - it can be anything you like - it is used by the function decorator
 (described below) to confirm that the token given matches the function being
-called.
+called - i.e. the ``token.scope`` must match the function decorator scope kwarg:
+
+.. code:: python
+
+    token = RequestToken(scope="foo")
+
+    # this will raise a 403 without even calling the function
+    @use_request_token(scope="bar")
+    def incorrect_scope(request):
+        pass
+
+    # this will call the function as expected
+    @use_request_token(scope="foo")
+    def correct_scope(request):
+        pass
+
+The token itself - the value that must be appended to links as a querystring
+argument - is a JWT - and comes from the ``RequestToken.jwt()`` method. For example,
+if you were sending out an email, you might render the email as an HTML template
+like this:
+
+.. code:: html
+
+    {% if token %}
+        <a href="{{url}}?token={{token.jwt}}>click here</a>
+    {% else %}
+        <a href="{{url}}">click here</a>
+    {% endif %}
+
+If you haven't come across JWT before you can find out more on the `jwt.io <https://jwt.io/>`_ website. The token produced will include the following JWT claims (available as the property ``RequestToken.claims``:
+
+* max: maximum times the token can be used
+* sub: the scope
+* mod: the login mode
+* jti: the token id
+* aud: (optional) the user the token represents
+* exp: (optional) the expiration time of the token
+* iat: (optional) the time the token was issued
+* ndf: (optional) the not-before-time of the token
 
 **request_token.middleware.RequestTokenMiddleware** - decodes and verifies tokens
 
-The ``RequestTokenMiddleware`` will look for a querystring token value, and if
-it finds one it will verify the token (using the JWT decode verification). If
-the token is verified, it will fetch the token object from the database and
-perform additional validation against the token attributes. If the token checks
-out it is added to the incoming request as a ``token`` attribute. This way you
-can add arbitrary data (stored on the token) to incoming requests.
+The ``RequestTokenMiddleware`` will look for a querystring token value (the argument name defaults to 'token' and can overridden using the ``JWT_QUERYSTRING_ARG`` setting), and if it finds one it will verify the token (using the JWT decode verification). If the token is verified, it will fetch the token object from the database and perform additional validation against the token attributes. If the token checks out it is added to the incoming request as a ``token`` attribute. This way you can add arbitrary data (stored on the token) to incoming requests.
 
 If the token has a user specified, then the ``request.user`` is updated to
 reflect this. The middleware must run after the Django auth middleware, and
@@ -242,7 +279,7 @@ Settings
 The default querystring argument name used to extract the token from incoming
 requests.
 
-String, defaults to **token**
+String, defaults to **rt**
 
 ``JWT_SESSION_TOKEN_EXPIRY``
 
@@ -250,7 +287,7 @@ Session tokens have a default expiry interval, specified in minutes.
 The primary use case (above) dictates that the expiry should be no longer
 than it takes to receive and open an email.
 
-Integer, defaults to **1** (minute).
+Integer, defaults to **10** (minutes).
 
 Logging
 =======
