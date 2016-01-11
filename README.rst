@@ -178,14 +178,14 @@ like this:
 
 If you haven't come across JWT before you can find out more on the `jwt.io <https://jwt.io/>`_ website. The token produced will include the following JWT claims (available as the property ``RequestToken.claims``:
 
-* max: maximum times the token can be used
-* sub: the scope
-* mod: the login mode
-* jti: the token id
-* aud: (optional) the user the token represents
-* exp: (optional) the expiration time of the token
-* iat: (optional) the time the token was issued
-* ndf: (optional) the not-before-time of the token
+* ``max``: maximum times the token can be used
+* ``sub``: the scope
+* ``mod``: the login mode
+* ``jti``: the token id
+* ``aud``: (optional) the user the token represents
+* ``exp``: (optional) the expiration time of the token
+* ``iat``: (optional) the time the token was issued
+* ``ndf``: (optional) the not-before-time of the token
 
 **request_token.middleware.RequestTokenMiddleware** - decodes and verifies tokens
 
@@ -199,13 +199,17 @@ If the token cannot be verified it returns a 403.
 
 **request_token.decorators.use_request_token** - applies token permissions to views
 
-The ``use_request_token`` decorator is used to indicate that a view function
-supports request tokens. If a token is provided (as ``request.token``), then
-the ``token.scope`` is matched against the scope specificed in the decorator.
+A function decorator that takes one mandatory kwargs (``scope``) and one optional
+kwargs (``required``). The ``scope`` is used to match tokens to view functions -
+it's just a straight text match - the value can be anything you like, but if the
+token scope is 'foo', then the corresponding view function decorator scope must
+match. The ``required`` kwarg is used to indicate whether the view **must** have
+a token in order to be used, or not. This defaults to False - if a token **is**
+provided, then it will be validated, if not, the view function is called as is.
 
 If the scopes do not match then a 403 is returned.
 
-If the scopes do match, the view function is executed as normal.
+If required is True and no token is provided the a 403 is returned.
 
 Installation
 ============
