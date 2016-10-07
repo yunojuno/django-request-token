@@ -4,10 +4,10 @@ import datetime
 import logging
 
 from django.contrib.auth import login
-from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils.timezone import now as tz_now
+from django.conf import settings
 
 from jwt.exceptions import InvalidAudienceError
 
@@ -15,6 +15,7 @@ from request_token.exceptions import MaxUseError
 from request_token.settings import JWT_SESSION_TOKEN_EXPIRY
 from request_token.utils import to_seconds, encode
 
+User = settings.AUTH_USER_MODEL
 logger = logging.getLogger(__name__)
 
 
