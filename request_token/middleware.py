@@ -10,6 +10,9 @@ from request_token.models import RequestToken
 from request_token.settings import JWT_QUERYSTRING_ARG
 from request_token.utils import decode
 
+from django.template import loader ## For rendering  a custom 403-page
+from request_token.settings import FOUR03_TEMPLATE
+
 logger = logging.getLogger(__name__)
 
 
@@ -69,8 +72,13 @@ class RequestTokenMiddleware(object):
             logger.warning(
                 "JWT token error (error code:'%s'): %s", key, ex
             )
-            response = HttpResponseForbidden(
-                u"Temporary link token error (code: %s)" % key
-            )
+            if FOUR03_TEMPLATE:
+                response = HttpResponseForbidden(
+                    loader.render_to_string(FOUR03_TEMPLATE)
+                )
+            else:
+                response = HttpResponseForbidden(
+                    u"Temporary link token error (code: %s)" % key
+                )
             response.error = ex
             return response
