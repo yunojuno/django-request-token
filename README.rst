@@ -293,6 +293,12 @@ than it takes to receive and open an email.
 
 Integer, defaults to **10** (minutes).
 
+``FOUR03_TEMPLATE``
+
+Specifying the 403-template so that for prettyfying the 403-response, in production.
+
+`FOUR03_TEMPLATE = os.path.join(BASE_DIR,'...','403.html')`
+
 Logging
 =======
 

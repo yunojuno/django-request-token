@@ -18,7 +18,12 @@ def respond_to_error(session_key, error):
         "JWT token error in session '%s': %s",
         session_key, error
     )
-    response = HttpResponseForbidden("Invalid URL token (code: %s)" % session_key)
+    if FOUR03_TEMPLATE:
+        response = HttpResponseForbidden(
+            loader.render_to_string(FOUR03_TEMPLATE, context = {'token_error':'Invalid URL token: %s'%session_key})
+        )
+    else:
+        response = HttpResponseForbidden("Invalid URL token (code: %s)" % session_key)
     response.error = error
     return response
 

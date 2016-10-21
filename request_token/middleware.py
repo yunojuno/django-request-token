@@ -74,7 +74,7 @@ class RequestTokenMiddleware(object):
             )
             if FOUR03_TEMPLATE:
                 response = HttpResponseForbidden(
-                    loader.render_to_string(FOUR03_TEMPLATE)
+                    loader.render_to_string(FOUR03_TEMPLATE, context = {'token_error':'Temporary link token error: %s'%key})
                 )
             else:
                 response = HttpResponseForbidden(
