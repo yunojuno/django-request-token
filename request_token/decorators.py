@@ -9,6 +9,10 @@ from jwt.exceptions import InvalidTokenError
 
 from request_token.exceptions import ScopeError, TokenNotFoundError
 
+## For rendering  a custom 403-page
+from django.template import loader
+from request_token.settings import FOUR03_TEMPLATE
+
 logger = logging.getLogger(__name__)
 
 

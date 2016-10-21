@@ -10,7 +10,8 @@ from request_token.models import RequestToken
 from request_token.settings import JWT_QUERYSTRING_ARG
 from request_token.utils import decode
 
-from django.template import loader ## For rendering  a custom 403-page
+## For rendering  a custom 403-page
+from django.template import loader 
 from request_token.settings import FOUR03_TEMPLATE
 
 logger = logging.getLogger(__name__)
