@@ -6,13 +6,12 @@ from django.http import HttpResponseForbidden, HttpResponseNotAllowed
 
 from jwt.exceptions import InvalidTokenError
 
-from request_token.models import RequestToken
-from request_token.settings import JWT_QUERYSTRING_ARG
-from request_token.utils import decode
+from .models import RequestToken
+from .settings import JWT_QUERYSTRING_ARG, FOUR03_TEMPLATE
+from .utils import decode
 
-## For rendering  a custom 403-page
-from django.template import loader 
-from request_token.settings import FOUR03_TEMPLATE
+# For rendering  a custom 403-page
+from django.template import loader
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +74,12 @@ class RequestTokenMiddleware(object):
             )
             if FOUR03_TEMPLATE:
                 response = HttpResponseForbidden(
-                    loader.render_to_string(FOUR03_TEMPLATE, context = {'token_error':'Temporary link token error: %s'%key})
+                    loader.render_to_string(
+                        FOUR03_TEMPLATE,
+                        context={
+                            'token_error': 'Temporary link token error: %s' % key
+                        }
+                    )
                 )
             else:
                 response = HttpResponseForbidden(

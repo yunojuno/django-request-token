@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """request_token models."""
 import datetime
+import json
 import logging
 
 from django.contrib.auth import login
@@ -11,9 +12,9 @@ from django.utils.timezone import now as tz_now
 
 from jwt.exceptions import InvalidAudienceError
 
-from request_token.exceptions import MaxUseError
-from request_token.settings import JWT_SESSION_TOKEN_EXPIRY
-from request_token.utils import to_seconds, encode
+from .exceptions import MaxUseError
+from .settings import JWT_SESSION_TOKEN_EXPIRY
+from .utils import to_seconds, encode
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +123,7 @@ class RequestToken(models.Model):
         return unicode(self).encode('utf-8')
 
     def __repr__(self):
-        return u"<RequestToken id=%s scope=%s login_mode='%s'>" %(
+        return u"<RequestToken id=%s scope=%s login_mode='%s'>" % (
             self.id, self.scope, self.login_mode)
 
     @property
@@ -179,6 +180,14 @@ class RequestToken(models.Model):
         if self.not_before_time is not None:
             claims['nbf'] = to_seconds(self.not_before_time)
         return claims
+
+    def json(self):
+        """Return the data field as a JSON dict.
+
+        This will fail hard if the data field cannot be deserialized.
+
+        """
+        return json.loads(self.data)
 
     def clean(self):
         """Ensure that login_mode setting is valid."""
@@ -367,7 +376,7 @@ class RequestTokenLog(models.Model):
         return unicode(self).encode('utf-8')
 
     def __repr__(self):
-        return u"<RequestTokenLog id=%s token=%s timestamp='%s'>" %(
+        return u"<RequestTokenLog id=%s token=%s timestamp='%s'>" % (
             self.id, self.token.id, self.timestamp)
 
     def save(self, *args, **kwargs):

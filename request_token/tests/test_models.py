@@ -14,10 +14,10 @@ from django.http import HttpResponse
 from django.test import TransactionTestCase, RequestFactory
 from django.utils.timezone import now as tz_now
 
-from request_token.models import RequestToken, RequestTokenLog
-from request_token.exceptions import MaxUseError
-from request_token.settings import JWT_SESSION_TOKEN_EXPIRY
-from request_token.utils import to_seconds, decode
+from ..models import RequestToken, RequestTokenLog
+from ..exceptions import MaxUseError
+from ..settings import JWT_SESSION_TOKEN_EXPIRY
+from ..utils import to_seconds, decode
 
 
 class RequestTokenTests(TransactionTestCase):
@@ -109,6 +109,13 @@ class RequestTokenTests(TransactionTestCase):
             self.assertEqual(token.iat, now_sec)
             self.assertEqual(token.jti, token.id)
             self.assertEqual(len(token.claims), 8)
+
+    def test_json(self):
+        """Test the json method."""
+        token = RequestToken(data='{"foo": true}')
+        self.assertEqual(token.json(), {"foo": True})
+        token.data = 'foo'
+        self.assertRaises(ValueError, token.json)
 
     def test_clean(self):
         token = RequestToken(

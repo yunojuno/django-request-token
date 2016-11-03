@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """request_token middleware tests."""
+import mock
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
@@ -7,9 +9,9 @@ from django.test import TransactionTestCase, RequestFactory
 
 from jwt import exceptions
 
-from request_token.models import RequestToken
-from request_token.settings import JWT_QUERYSTRING_ARG
-from request_token.middleware import RequestTokenMiddleware
+from ..models import RequestToken
+from ..settings import JWT_QUERYSTRING_ARG
+from ..middleware import RequestTokenMiddleware
 
 
 class MockSession(object):
@@ -42,7 +44,7 @@ class MiddlewareTests(TransactionTestCase):
         request.session = MockSession()
 
         self.assertIsNone(process_request(request))
-        self.assertFalse(hasattr(request, 'token_payload'))
+        self.assertFalse(hasattr(request, 'token'))
 
     def test_process_request_without_token(self):
         request = self.factory.post('/')
@@ -51,7 +53,7 @@ class MiddlewareTests(TransactionTestCase):
         request.user = AnonymousUser()
         request.session = MockSession()
         self.assertIsNone(process_request(request))
-        self.assertFalse(hasattr(request, 'token_payload'))
+        self.assertFalse(hasattr(request, 'token'))
 
     def test_process_request_with_token(self):
 
@@ -81,7 +83,7 @@ class MiddlewareTests(TransactionTestCase):
         response = self.middleware.process_request(request)
         self.assertIsInstance(response, HttpResponseNotAllowed)
         self.assertFalse(hasattr(response, 'error'))
-        self.assertFalse(hasattr(request, 'token_payload'))
+        self.assertFalse(hasattr(request, 'token'))
         self.assertEqual(response.status_code, 405)
 
     def test_process_request_forbidden(self):
@@ -98,10 +100,18 @@ class MiddlewareTests(TransactionTestCase):
         self.assertIsInstance(response, HttpResponseForbidden)
         self.assertIsInstance(response.error, exceptions.DecodeError)
         self.assertEqual(response.status_code, 403)
-        self.assertFalse(hasattr(request, 'token_payload'))
+        self.assertFalse(hasattr(request, 'token'))
 
-
-# class IntegrationTests(TransactionTestCase):
-
-#     """Test the end-to-end process."""
-
+        # test with a FOUR03_TEMPLATE setting
+        from request_token import middleware
+        with mock.patch.multiple(middleware, FOUR03_TEMPLATE='foo.html', loader=mock.Mock()):
+            response = self.middleware.process_request(request)
+            self.assertIsInstance(response, HttpResponseForbidden)
+            self.assertIsInstance(response.error, exceptions.DecodeError)
+            self.assertEqual(response.status_code, 403)
+            self.assertFalse(hasattr(request, 'token'))
+            # this has been mocked out
+            middleware.loader.render_to_string.assert_called_once_with(
+                'foo.html',
+                context={'token_error': 'Temporary link token error: foobar'}
+            )
