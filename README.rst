@@ -7,7 +7,7 @@
 .. image:: https://codecov.io/gh/yunojuno/django-request-token/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/yunojuno/django-request-token
 
-django-request-token
+Django Request Token
 --------------------
 
 Django app that uses JWT to manage one-time and expiring tokens to protect URLs.
