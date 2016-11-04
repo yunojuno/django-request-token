@@ -73,14 +73,13 @@ class RequestTokenMiddleware(object):
                 "JWT token error (error code:'%s'): %s", key, ex
             )
             if FOUR03_TEMPLATE:
-                response = HttpResponseForbidden(
-                    loader.render_to_string(
-                        FOUR03_TEMPLATE,
-                        context={
-                            'token_error': 'Temporary link token error: %s' % key
-                        }
-                    )
+                html = loader.render_to_string(
+                    FOUR03_TEMPLATE,
+                    context={
+                        'token_error': 'Temporary link token error: %s' % key
+                    }
                 )
+                response = HttpResponseForbidden(html)
             else:
                 response = HttpResponseForbidden(
                     u"Temporary link token error (code: %s)" % key

@@ -368,6 +368,10 @@ class RequestTokenLog(models.Model):
         help_text="Time the request was logged."
     )
 
+    class Meta:
+        verbose_name = "Token use"
+        verbose_name_plural = "Token use logs"
+
     def __unicode__(self):
         if self.user is None:
             return u"%s used %s" % (self.token, self.timestamp)
