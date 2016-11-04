@@ -284,24 +284,31 @@ will return a 403.
 Settings
 ========
 
-``JWT_QUERYSTRING_ARG``
+Settings are read in from the environment or Django settings:
 
-The default querystring argument name used to extract the token from incoming
-requests.
+.. code:: python
 
-String, defaults to **rt**
+    os.getenv('SETTING_NAME') or django.conf.settings.get('SETTING_NAME', default)
 
-``JWT_SESSION_TOKEN_EXPIRY``
+* ``REQUEST_TOKEN_QUERYSTRING``
+
+The querystring argument name used to extract the token from incoming
+requests, defaults to **rt**.
+
+* ``REQUEST_TOKEN_EXPIRY``
 
 Session tokens have a default expiry interval, specified in minutes.
 The primary use case (above) dictates that the expiry should be no longer
-than it takes to receive and open an email.
+than it takes to receive and open an email, defaults to **10** (minutes).
 
-Integer, defaults to **10** (minutes).
+* ``REQUEST_TOKEN_403_TEMPLATE``
 
-``FOUR03_TEMPLATE``
+Specifying the 403-template so that for prettyfying the 403-response,
+in production with a setting like:
 
-Specifying the 403-template so that for prettyfying the 403-response, in production with a setting like: ``FOUR03_TEMPLATE = os.path.join(BASE_DIR,'...','403.html')``
+.. code:: python
+
+    FOUR03_TEMPLATE = os.path.join(BASE_DIR,'...','403.html')
 
 Logging
 =======
