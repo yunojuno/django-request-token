@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-"""request_token admin models."""
-import datetime
 import json
 
 from django.contrib import admin
 from django.utils.safestring import mark_safe
 from django.utils.timezone import now as tz_now
 
-from request_token.models import RequestToken
+from .models import (
+    RequestToken,
+    RequestTokenLog
+)
 
 
 def pretty_print(data):
@@ -66,3 +67,20 @@ class RequestTokenAdmin(admin.ModelAdmin):
 
 
 admin.site.register(RequestToken, RequestTokenAdmin)
+
+
+class RequestTokenLogAdmin(admin.ModelAdmin):
+
+    """Admin model for RequestTokenLog objects."""
+
+    list_display = (
+        'token',
+        'user',
+        'status_code',
+        'timestamp'
+    )
+    search_fields = ('user__first_name', 'user__username')
+    raw_id_fields = ('user', 'token')
+
+
+admin.site.register(RequestTokenLog, RequestTokenLogAdmin)
