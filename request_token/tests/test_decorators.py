@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 """request_token decorator tests."""
+import mock
+
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse, HttpResponseForbidden
-from django.test import TransactionTestCase, RequestFactory
+from django.test import TestCase, RequestFactory
 
-from request_token.decorators import use_request_token, respond_to_error
-from request_token.exceptions import ScopeError, TokenNotFoundError
-from request_token.models import RequestToken, RequestTokenLog
-from request_token.settings import JWT_QUERYSTRING_ARG
-from request_token.middleware import RequestTokenMiddleware
+from ..decorators import use_request_token, respond_to_error
+from ..exceptions import ScopeError, TokenNotFoundError
+from ..models import RequestToken, RequestTokenLog
+from ..settings import JWT_QUERYSTRING_ARG
+from ..middleware import RequestTokenMiddleware
 
 
 @use_request_token(scope="foo")
@@ -27,7 +29,7 @@ class MockSession(object):
         return "foobar"
 
 
-class DecoratorTests(TransactionTestCase):
+class DecoratorTests(TestCase):
 
     """use_jwt decorator tests."""
 
@@ -48,6 +50,20 @@ class DecoratorTests(TransactionTestCase):
         response = respond_to_error("bar", ex)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.error, ex)
+
+        from request_token import decorators
+        with mock.patch.multiple(
+            decorators,
+            loader=mock.Mock(),
+            FOUR03_TEMPLATE='foo.html'
+        ):
+            response = respond_to_error("bar", ex)
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(response.error, ex)
+            decorators.loader.render_to_string.assert_called_once_with(
+                'foo.html',
+                context={'token_error': 'Invalid URL token: bar'}
+            )
 
     def test_no_token(self):
         request = self._request('/', None, AnonymousUser())
@@ -78,4 +94,3 @@ class DecoratorTests(TransactionTestCase):
         response = test_view_func(request)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(RequestTokenLog.objects.exists())
-

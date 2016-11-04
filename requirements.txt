@@ -1,7 +1,8 @@
+# install these requirements if you want to run the project locally
 appnope==0.1.0
 coverage==4.0.3
 decorator==4.0.6
-Django==1.8
+# Django==1.8  # install manually depending on your requirements
 funcsigs==0.4
 gnureadline==6.3.3
 ipython==4.0.1

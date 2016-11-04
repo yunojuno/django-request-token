@@ -11,7 +11,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.http import HttpResponse
-from django.test import TransactionTestCase, RequestFactory
+from django.test import TestCase, RequestFactory
 from django.utils.timezone import now as tz_now
 
 from ..models import RequestToken, RequestTokenLog
@@ -20,12 +20,17 @@ from ..settings import JWT_SESSION_TOKEN_EXPIRY
 from ..utils import to_seconds, decode
 
 
-class RequestTokenTests(TransactionTestCase):
+class RequestTokenTests(TestCase):
 
     """RequestToken model property and method tests."""
 
     def setUp(self):
-        self.user = get_user_model().objects.create_user('zoidberg')
+        # ensure user has unicode chars
+        self.user = get_user_model().objects.create_user(
+            'zoidberg',
+            first_name=u'ß∂ƒ©˙∆',
+            last_name=u'ƒ∆'
+        )
 
     def test_defaults(self):
         token = RequestToken()
@@ -38,6 +43,12 @@ class RequestTokenTests(TransactionTestCase):
         self.assertIsNone(token.issued_at)
         self.assertEqual(token.max_uses, 1)
         self.assertEqual(token.used_to_date, 0)
+
+    def test_string_repr(self):
+        token = RequestToken(user=self.user)
+        self.assertIsNotNone(str(token))
+        self.assertIsNotNone(repr(token))
+        self.assertIsNotNone(unicode(token))
 
     def test_save(self):
         token = RequestToken().save()
@@ -300,7 +311,7 @@ class RequestTokenTests(TransactionTestCase):
         self.assertRaises(InvalidAudienceError, token.authenticate, request)
 
 
-class RequestTokenQuerySetTests(TransactionTestCase):
+class RequestTokenQuerySetTests(TestCase):
 
     """RequestTokenQuerySet class tests."""
 
@@ -310,12 +321,16 @@ class RequestTokenQuerySetTests(TransactionTestCase):
         self.assertEqual(RequestToken.objects.get().scope, 'foo')
 
 
-class RequestTokenLogTests(TransactionTestCase):
+class RequestTokenLogTests(TestCase):
 
     """RequestTokenLog model property and method tests."""
 
     def setUp(self):
-        self.user = get_user_model().objects.create_user('zoidberg')
+        self.user = get_user_model().objects.create_user(
+            'zoidberg',
+            first_name=u'∂ƒ©˙∆',
+            last_name=u'†¥¨^'
+        )
         self.token = RequestToken.objects.create_token(
             scope='foo',
             user=self.user,
@@ -332,6 +347,25 @@ class RequestTokenLogTests(TransactionTestCase):
         self.assertEqual(log.user_agent, '')
         self.assertEqual(log.client_ip, '')
         self.assertIsNone(log.timestamp)
+
+        token = RequestToken(user=self.user)
+        self.assertIsNotNone(str(token))
+        self.assertIsNotNone(repr(token))
+        self.assertIsNotNone(unicode(token))
+
+    def test_string_repr(self):
+        log = RequestTokenLog(
+            token=self.token,
+            user=self.user
+        )
+        self.assertIsNotNone(str(log))
+        self.assertIsNotNone(repr(log))
+        self.assertIsNotNone(unicode(log))
+
+        log.user = None
+        self.assertIsNotNone(str(log))
+        self.assertIsNotNone(repr(log))
+        self.assertIsNotNone(unicode(log))
 
     def test_save(self):
         log = RequestTokenLog(

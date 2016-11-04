@@ -59,10 +59,6 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
         },
-        'null': {
-            'level': 'DEBUG',
-            'class': 'django.utils.log.NullHandler',
-        },
     },
     'loggers': {
         'request_token': {

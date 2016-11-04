@@ -5,7 +5,7 @@ import mock
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
-from django.test import TransactionTestCase, RequestFactory
+from django.test import TestCase, RequestFactory
 
 from jwt import exceptions
 
@@ -23,7 +23,7 @@ class MockSession(object):
         return "foobar"
 
 
-class MiddlewareTests(TransactionTestCase):
+class MiddlewareTests(TestCase):
 
     """RequestTokenMiddleware tests."""
 
