@@ -124,9 +124,19 @@ class RequestTokenTests(TestCase):
     def test_json(self):
         """Test the json method."""
         token = RequestToken(data='{"foo": true}')
-        self.assertEqual(token.json(), {"foo": True})
+        self.assertEqual(token.json, {"foo": True})
         token.data = 'foo'
-        self.assertRaises(ValueError, token.json)
+        with self.assertRaises(ValueError):
+            token.json
+
+        def assertData(value, expected):
+            token.json = value
+            self.assertEqual(token.data, expected)
+
+        assertData({'foo': True}, '{"foo": true}')
+        assertData({'foo': None}, '{"foo": null}')
+        assertData("foo", '"foo"')
+        assertData(1, '1')
 
     def test_clean(self):
         token = RequestToken(

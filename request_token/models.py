@@ -181,13 +181,15 @@ class RequestToken(models.Model):
             claims['nbf'] = to_seconds(self.not_before_time)
         return claims
 
+    @property
     def json(self):
-        """Return the data field as a JSON dict.
-
-        This will fail hard if the data field cannot be deserialized.
-
-        """
+        """Return the data field as a dict."""
         return json.loads(self.data)
+
+    @json.setter
+    def json(self, value):
+        """Set the underlying data text field from a dict."""
+        self.data = json.dumps(value)
 
     def clean(self):
         """Ensure that login_mode setting is valid."""
