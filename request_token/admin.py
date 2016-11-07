@@ -38,20 +38,40 @@ class RequestTokenAdmin(admin.ModelAdmin):
         'issued_at',
         'is_valid'
     )
-    readonly_fields = ('pretty_payload', 'jwt', 'issued_at')
+    readonly_fields = ('issued_at', 'jwt', '_parsed', '_claims', '_json')
     search_fields = ('user__first_name', 'user__username')
     raw_id_fields = ('user',)
 
-    def pretty_payload(self, obj):
+    def _claims(self, obj):
         return pretty_print(obj.claims)
-    pretty_payload.short_description = "Payload"
+
+    _claims.short_description = "JWT (decoded)"
+
+    def _json(self, obj):
+        return pretty_print(obj.json)
+
+    _json.short_description = "Data (JSON)"
 
     def jwt(self, obj):
         try:
             return obj.jwt()
         except:
             return None
+
     jwt.short_description = "JWT"
+
+    def _parsed(self, obj):
+        try:
+            jwt = obj.jwt().split('.')
+            return pretty_print({
+                "header": jwt[0],
+                "claims": jwt[1],
+                "signature": jwt[2]
+            })
+        except:
+            return None
+
+    _parsed.short_description = "JWT (parsed)"
 
     def is_valid(self, obj):
         """Validate the time window and usage."""
@@ -63,6 +83,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
         if obj.used_to_date >= obj.max_uses:
             return False
         return True
+
     is_valid.boolean = True
 
 

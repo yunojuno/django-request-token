@@ -66,7 +66,24 @@ class RequestTokenAdminTests(TestCase):
         self.assertRaises(MissingRequiredClaimError, token.jwt)
         self.assertEqual(admin.jwt(token), None)
 
-    def test_pretty_payload(self):
+    def test_claims(self):
         token = RequestToken(id=1, scope='foo').save()
         admin = RequestTokenAdmin(RequestToken, None)
-        self.assertEqual(admin.pretty_payload(token), pretty_print(token.claims))
+        self.assertEqual(admin._claims(token), pretty_print(token.claims))
+
+    def test_json(self):
+        token = RequestToken(id=1, scope='foo', data='{"foo": true}').save()
+        admin = RequestTokenAdmin(RequestToken, None)
+        self.assertEqual(admin._json(token), pretty_print(token.json))
+
+    def test_parsed(self):
+        token = RequestToken(id=1, scope='foo', data='{"foo": true}').save()
+        admin = RequestTokenAdmin(RequestToken, None)
+        parsed = admin._parsed(token)
+        self.assertTrue('header' in parsed)
+        self.assertTrue('claims' in parsed)
+        self.assertTrue('signature' in parsed)
+
+        # if the token is invalid we get None back
+        with mock.patch.object(RequestToken, 'jwt', side_effect=Exception()):
+            self.assertIsNone(admin._parsed(token))
