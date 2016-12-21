@@ -355,7 +355,7 @@ class RequestTokenLogTests(TestCase):
         self.assertEqual(log.user, self.user)
         self.assertEqual(log.token, self.token)
         self.assertEqual(log.user_agent, '')
-        self.assertEqual(log.client_ip, '')
+        self.assertEqual(log.client_ip, None)
         self.assertIsNone(log.timestamp)
 
         token = RequestToken(user=self.user)
@@ -386,3 +386,22 @@ class RequestTokenLogTests(TestCase):
 
         log.timestamp = None
         self.assertRaises(IntegrityError, log.save, update_fields=['timestamp'])
+
+    def test_ipv6(self):
+        """Test that IP v4 and v6 are handled."""
+        log = RequestTokenLog(
+            token=self.token,
+            user=self.user
+        ).save()
+        self.assertIsNone(log.client_ip)
+
+        def assertIP(ip):
+            log.client_ip = ip
+            log.save()
+            self.assertEqual(log.client_ip, ip)
+
+        assertIP('192.168.0.1')
+        # taken from http://ipv6.com/articles/general/IPv6-Addressing.htm
+        assertIP('2001:cdba:0000:0000:0000:0000:3257:9652')
+        assertIP('2001:cdba:0:0:0:0:3257:9652')
+        assertIP('2001:cdba::3257:9652')

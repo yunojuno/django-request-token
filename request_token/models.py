@@ -355,8 +355,10 @@ class RequestTokenLog(models.Model):
         blank=True,
         help_text="User-agent of client used to make the request."
     )
-    client_ip = models.CharField(
-        max_length=15,
+    client_ip = models.GenericIPAddressField(
+        blank=True,
+        null=True,
+        unpack_ipv4=True,
         help_text="Client IP of device used to make the request."
     )
     status_code = models.IntegerField(
