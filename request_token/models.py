@@ -321,7 +321,7 @@ class RequestToken(models.Model):
             "authentication middleware is installed."
         )
         meta = request.META
-        xff = meta.get('HTTP_X_FORWARDED_FOR', None)
+        xff = parse_xff(meta.get('HTTP_X_FORWARDED_FOR'))
         client_ip = xff or meta.get('REMOTE_ADDR', 'unknown')
         user = None if request.user.is_anonymous() else request.user
         rtu = RequestTokenLog(
@@ -335,6 +335,25 @@ class RequestToken(models.Model):
         self.used_to_date = models.F('used_to_date') + 1
         self.save()
         return rtu
+
+
+def parse_xff(header_value):
+    """
+    Parses out the X-Forwarded-For request header.
+
+    This handles the bug that blows up when multiple IP addresses are
+    specified in the header. The docs state that the header contains
+    "The originating IP address", but in reality it contains a list
+    of all the intermediate addresses. The first item is the original
+    client, and then any intermediate proxy IPs. We want the original.
+
+    Returns the first IP in the list, else None.
+
+    """
+    try:
+        return header_value.split(',')[0].strip()
+    except (KeyError, AttributeError):
+        return None
 
 
 class RequestTokenLog(models.Model):

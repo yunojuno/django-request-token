@@ -14,7 +14,7 @@ from django.http import HttpResponse
 from django.test import TestCase, RequestFactory
 from django.utils.timezone import now as tz_now
 
-from ..models import RequestToken, RequestTokenLog
+from ..models import RequestToken, RequestTokenLog, parse_xff
 from ..exceptions import MaxUseError
 from ..settings import JWT_SESSION_TOKEN_EXPIRY
 from ..utils import to_seconds, decode
@@ -319,6 +319,18 @@ class RequestTokenTests(TestCase):
 
         request.user = get_user_model().objects.create_user(username="Hyde")
         self.assertRaises(InvalidAudienceError, token.authenticate, request)
+
+    def test_parse_xff(self):
+
+        def assertMeta(meta, expected):
+            self.assertEqual(parse_xff(meta), expected)
+
+        assertMeta(None, None)
+        assertMeta('', '')
+        assertMeta('foo', 'foo')
+        assertMeta('foo, bar, baz', 'foo')
+        assertMeta('foo , bar, baz', 'foo')
+        assertMeta("8.8.8.8, 123.124.125.126", '8.8.8.8')
 
 
 class RequestTokenQuerySetTests(TestCase):
