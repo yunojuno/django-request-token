@@ -13,11 +13,12 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name="django-request-token",
-    version="0.3.2",
+    version="0.3.3-dev",
     packages=find_packages(),
     install_requires=REQUIREMENTS,
     include_package_data=True,
     description='JWT-backed Django app for managing querystring tokens.',
+    license='MIT',
     long_description=README,
     url='https://github.com/yunojuno/django-request-token',
     author='Hugo Rodger-Brown',
