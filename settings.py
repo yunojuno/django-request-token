@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """request_token default test settings."""
+from distutils.version import StrictVersion
+
+import django
+
+
+DJANGO_VERSION = StrictVersion(django.get_version())
+
 DEBUG = True
 
 DATABASES = {
@@ -21,7 +28,7 @@ INSTALLED_APPS = (
     'test_app'
 )
 
-MIDDLEWARE_CLASSES = [
+_MIDDLEWARE_CLASSES = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -29,6 +36,11 @@ MIDDLEWARE_CLASSES = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'request_token.middleware.RequestTokenMiddleware',
 ]
+
+if DJANGO_VERSION < StrictVersion('1.10.0'):
+    MIDDLEWARE_CLASSES = _MIDDLEWARE_CLASSES
+else:
+    MIDDLEWARE = _MIDDLEWARE_CLASSES
 
 TEMPLATES = [
     {
