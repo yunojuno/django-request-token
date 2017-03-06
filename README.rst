@@ -177,7 +177,7 @@ like this:
 .. code:: html
 
     {% if token %}
-        <a href="{{url}}?token={{token.jwt}}>click here</a>
+        <a href="{{url}}?rt={{token.jwt}}>click here</a>
     {% else %}
         <a href="{{url}}">click here</a>
     {% endif %}
@@ -195,7 +195,7 @@ If you haven't come across JWT before you can find out more on the `jwt.io <http
 
 **request_token.middleware.RequestTokenMiddleware** - decodes and verifies tokens
 
-The ``RequestTokenMiddleware`` will look for a querystring token value (the argument name defaults to 'token' and can overridden using the ``JWT_QUERYSTRING_ARG`` setting), and if it finds one it will verify the token (using the JWT decode verification). If the token is verified, it will fetch the token object from the database and perform additional validation against the token attributes. If the token checks out it is added to the incoming request as a ``token`` attribute. This way you can add arbitrary data (stored on the token) to incoming requests.
+The ``RequestTokenMiddleware`` will look for a querystring token value (the argument name defaults to 'rt' and can overridden using the ``JWT_QUERYSTRING_ARG`` setting), and if it finds one it will verify the token (using the JWT decode verification). If the token is verified, it will fetch the token object from the database and perform additional validation against the token attributes. If the token checks out it is added to the incoming request as a ``token`` attribute. This way you can add arbitrary data (stored on the token) to incoming requests.
 
 If the token has a user specified, then the ``request.user`` is updated to
 reflect this. The middleware must run after the Django auth middleware, and
@@ -264,7 +264,7 @@ can add the token JWT to your URLs (using the ``jwt()`` method):
 .. code:: python
 
     >>> token = RequestToken.objects.create_token(scope="foo")
-    >>> url = "https://example.com/foo?token=" + token.jwt()
+    >>> url = "https://example.com/foo?rt=" + token.jwt()
 
 You now have a request token enabled URL. You can use this token to protect a
 view function using the view decorator:
