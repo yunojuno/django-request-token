@@ -8,6 +8,7 @@ from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.utils.encoding import python_2_unicode_compatible
 from django.utils.timezone import now as tz_now
 
 from jwt.exceptions import InvalidAudienceError
@@ -28,6 +29,7 @@ class RequestTokenQuerySet(models.query.QuerySet):
         return RequestToken(scope=scope, **kwargs).save()
 
 
+@python_2_unicode_compatible
 class RequestToken(models.Model):
 
     """A link token, targeted for use by a known Django User.
@@ -116,11 +118,8 @@ class RequestToken(models.Model):
 
     objects = RequestTokenQuerySet.as_manager()
 
-    def __unicode__(self):
-        return u"Request token #%s" % (self.id)
-
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return "Request token #%s" % (self.id)
 
     def __repr__(self):
         return u"<RequestToken id=%s scope=%s login_mode='%s'>" % (
@@ -231,7 +230,7 @@ class RequestToken(models.Model):
 
     def jwt(self):
         """Encode the token claims into a JWT."""
-        return encode(self.claims)
+        return encode(self.claims).decode()
 
     def validate_max_uses(self):
         """Check the token max_uses is still valid.
@@ -356,6 +355,7 @@ def parse_xff(header_value):
         return None
 
 
+@python_2_unicode_compatible
 class RequestTokenLog(models.Model):
 
     """Used to log the use of a RequestToken."""
@@ -393,14 +393,11 @@ class RequestTokenLog(models.Model):
         verbose_name = "Token use"
         verbose_name_plural = "Token use logs"
 
-    def __unicode__(self):
-        if self.user is None:
-            return u"%s used %s" % (self.token, self.timestamp)
-        else:
-            return u"%s used by %s at %s" % (self.token, self.user, self.timestamp)
-
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        if self.user is None:
+            return "%s used %s" % (self.token, self.timestamp)
+        else:
+            return "%s used by %s at %s" % (self.token, self.user, self.timestamp)
 
     def __repr__(self):
         return u"<RequestTokenLog id=%s token=%s timestamp='%s'>" % (

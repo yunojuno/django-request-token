@@ -2,6 +2,7 @@
 """request_token model tests."""
 import datetime
 import mock
+import six
 
 from jwt.exceptions import InvalidAudienceError
 
@@ -48,7 +49,8 @@ class RequestTokenTests(TestCase):
         token = RequestToken(user=self.user)
         self.assertIsNotNone(str(token))
         self.assertIsNotNone(repr(token))
-        self.assertIsNotNone(unicode(token))
+        if six.PY2:
+            self.assertIsNotNone(unicode(token))
 
     def test_save(self):
         token = RequestToken().save()
@@ -373,7 +375,8 @@ class RequestTokenLogTests(TestCase):
         token = RequestToken(user=self.user)
         self.assertIsNotNone(str(token))
         self.assertIsNotNone(repr(token))
-        self.assertIsNotNone(unicode(token))
+        if six.PY2:
+            self.assertIsNotNone(unicode(token))
 
     def test_string_repr(self):
         log = RequestTokenLog(
@@ -382,12 +385,14 @@ class RequestTokenLogTests(TestCase):
         )
         self.assertIsNotNone(str(log))
         self.assertIsNotNone(repr(log))
-        self.assertIsNotNone(unicode(log))
+        if six.PY2:
+            self.assertIsNotNone(unicode(log))
 
         log.user = None
         self.assertIsNotNone(str(log))
         self.assertIsNotNone(repr(log))
-        self.assertIsNotNone(unicode(log))
+        if six.PY2:
+            self.assertIsNotNone(unicode(log))
 
     def test_save(self):
         log = RequestTokenLog(
