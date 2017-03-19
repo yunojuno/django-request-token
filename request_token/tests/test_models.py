@@ -69,9 +69,9 @@ class RequestTokenTests(TestCase):
         token = token.save(update_fields=['issued_at'])
         self.assertIsNone(token.issued_at)
 
-        now = tz_now()
+        now = datetime.datetime.utcnow()
         expires = now + datetime.timedelta(minutes=JWT_SESSION_TOKEN_EXPIRY)
-        with mock.patch('request_token.models.tz_now', lambda: now):
+        with mock.patch('request_token.models', lambda: now):
             token = RequestToken(
                 login_mode=RequestToken.LOGIN_MODE_SESSION,
                 user=self.user,
@@ -105,7 +105,7 @@ class RequestTokenTests(TestCase):
         self.assertEqual(token.claims['mod'], RequestToken.LOGIN_MODE_REQUEST[:1].lower())
         self.assertEqual(len(token.claims), 4)
 
-        now = tz_now()
+        now = datetime.datetime.utcnow()
         now_sec = to_seconds(now)
 
         token.expiration_time = now
@@ -117,7 +117,7 @@ class RequestTokenTests(TestCase):
         self.assertEqual(len(token.claims), 6)
 
         # saving updates the id and issued_at timestamp
-        with mock.patch('request_token.models.tz_now', lambda: now):
+        with mock.patch('request_token.models', lambda: now):
             token.save()
             self.assertEqual(token.iat, now_sec)
             self.assertEqual(token.jti, token.id)
@@ -160,7 +160,7 @@ class RequestTokenTests(TestCase):
             """Reset properties so that token passes validation."""
             token.login_mode = RequestToken.LOGIN_MODE_SESSION
             token.user = self.user
-            token.issued_at = tz_now()
+            token.issued_at = datetime.datetime.utcnow()
             token.expiration_time = token.issued_at + datetime.timedelta(minutes=1)
             token.max_uses = 1
 

@@ -4,6 +4,7 @@ import json
 from django.contrib import admin
 from django.utils.safestring import mark_safe
 from django.utils.timezone import now as tz_now
+import datetime
 
 from .models import (
     RequestToken,
@@ -75,7 +76,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
 
     def is_valid(self, obj):
         """Validate the time window and usage."""
-        now = tz_now()
+        now = datetime.datetime.utcnow()
         if obj.not_before_time and obj.not_before_time > now:
             return False
         if obj.expiration_time and obj.expiration_time < now:
