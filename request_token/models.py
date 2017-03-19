@@ -218,7 +218,7 @@ class RequestToken(models.Model):
 
     def save(self, *args, **kwargs):
         if 'update_fields' not in kwargs:
-            self.issued_at = self.issued_at or tz_now()
+            self.issued_at = self.issued_at or datetime.datetime.utcnow()
             if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
                 self.expiration_time = self.expiration_time or (
                     self.issued_at +
@@ -405,6 +405,6 @@ class RequestTokenLog(models.Model):
 
     def save(self, *args, **kwargs):
         if 'update_fields' not in kwargs:
-            self.timestamp = self.timestamp or tz_now()
+            self.timestamp = self.timestamp or datetime.datetime.utcnow()
         super(RequestTokenLog, self).save(*args, **kwargs)
         return self

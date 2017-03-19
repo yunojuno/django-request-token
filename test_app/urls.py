@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from django.conf.urls import patterns, url
+from django.conf.urls import url
+from test_app.views import decorated, undecorated
 
-urlpatterns = patterns(
-    'test_app.views',
-    url(r'^decorated/$', 'decorated', name="decorated"),
-    url(r'^undecorated/$', 'undecorated', name="undecorated"),
-)
+urlpatterns = [
+    url(r'^decorated/$', decorated, name="decorated"),
+    url(r'^undecorated/$', undecorated, name="undecorated"),
+]

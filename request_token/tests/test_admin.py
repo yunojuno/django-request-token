@@ -34,7 +34,7 @@ class RequestTokenAdminTests(TestCase):
 
     @mock.patch('request_token.models.tz_now')
     def test_is_valid(self, mock_now):
-        now = tz_now()
+        now = datetime.datetime.utcnow()
         mock_now.return_value = now
         token = RequestToken()
         admin = RequestTokenAdmin(RequestToken, None)
