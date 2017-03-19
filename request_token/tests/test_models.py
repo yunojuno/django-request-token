@@ -71,7 +71,7 @@ class RequestTokenTests(TestCase):
 
         now = datetime.datetime.utcnow()
         expires = now + datetime.timedelta(minutes=JWT_SESSION_TOKEN_EXPIRY)
-        with mock.patch('request_token.models.tz_now', lambda: now):
+        with mock.patch('request_token.models', lambda: now):
             token = RequestToken(
                 login_mode=RequestToken.LOGIN_MODE_SESSION,
                 user=self.user,
@@ -117,7 +117,7 @@ class RequestTokenTests(TestCase):
         self.assertEqual(len(token.claims), 6)
 
         # saving updates the id and issued_at timestamp
-        with mock.patch('request_token.models.tz_now', lambda: now):
+        with mock.patch('request_token.models', lambda: now):
             token.save()
             self.assertEqual(token.iat, now_sec)
             self.assertEqual(token.jti, token.id)

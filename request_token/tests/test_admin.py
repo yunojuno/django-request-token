@@ -32,7 +32,7 @@ class RequestTokenAdminTests(TestCase):
 
     """RequestTokenAdmin class tests."""
 
-    @mock.patch('request_token.models.tz_now')
+    @mock.patch('request_token.models')
     def test_is_valid(self, mock_now):
         now = datetime.datetime.utcnow()
         mock_now.return_value = now
