@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """request_token default test settings."""
 from distutils.version import StrictVersion
+from os import getenv
 
 import django
 
@@ -11,8 +12,12 @@ DEBUG = True
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'jwt.db',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': getenv('TEST_DB_NAME', 'test'),
+        'USER': getenv('TEST_DB_USER', 'postgres'),
+        'PASSWORD': getenv('TEST_DB_PASSWORD', 'postgres'),
+        'HOST': getenv('TEST_DB_HOST', 'localhost'),
+        'PORT': getenv('TEST_DB_PORT', '5432'),
     }
 }
 

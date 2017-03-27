@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """request_token models."""
 import datetime
-import json
 import logging
 
 from django.contrib.auth import login
 from django.contrib.auth.models import User
+from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils.encoding import python_2_unicode_compatible
@@ -97,11 +97,10 @@ class RequestToken(models.Model):
         blank=True, null=True,
         help_text="Token cannot be used before this time (raises ImmatureSignatureError)."
     )
-    data = models.TextField(
-        max_length=1000,
+    data = JSONField(
         help_text="Custom data add to the token, but not encoded (must be fetched from DB).",
-        blank=True,
-        default='{}'
+        blank=True, null=True,
+        default=dict()
     )
     issued_at = models.DateTimeField(
         blank=True, null=True,
@@ -179,16 +178,6 @@ class RequestToken(models.Model):
         if self.not_before_time is not None:
             claims['nbf'] = to_seconds(self.not_before_time)
         return claims
-
-    @property
-    def json(self):
-        """Return the data field as a dict."""
-        return json.loads(self.data)
-
-    @json.setter
-    def json(self, value):
-        """Set the underlying data text field from a dict."""
-        self.data = json.dumps(value)
 
     def clean(self):
         """Ensure that login_mode setting is valid."""

@@ -40,7 +40,7 @@ class RequestTokenTests(TestCase):
         self.assertEqual(token.login_mode, RequestToken.LOGIN_MODE_NONE)
         self.assertIsNone(token.expiration_time)
         self.assertIsNone(token.not_before_time)
-        self.assertEqual(token.data, "{}")
+        self.assertEqual(token.data, {})
         self.assertIsNone(token.issued_at)
         self.assertEqual(token.max_uses, 1)
         self.assertEqual(token.used_to_date, 0)
@@ -60,7 +60,7 @@ class RequestTokenTests(TestCase):
         self.assertEqual(token.login_mode, RequestToken.LOGIN_MODE_NONE)
         self.assertIsNone(token.expiration_time)
         self.assertIsNone(token.not_before_time)
-        self.assertEqual(token.data, "{}")
+        self.assertEqual(token.data, {})
         self.assertIsNotNone(token.issued_at)
         self.assertEqual(token.max_uses, 1)
         self.assertEqual(token.used_to_date, 0)
@@ -124,21 +124,10 @@ class RequestTokenTests(TestCase):
             self.assertEqual(len(token.claims), 8)
 
     def test_json(self):
-        """Test the json method."""
-        token = RequestToken(data='{"foo": true}')
-        self.assertEqual(token.json, {"foo": True})
-        token.data = 'foo'
-        with self.assertRaises(ValueError):
-            token.json
-
-        def assertData(value, expected):
-            token.json = value
-            self.assertEqual(token.data, expected)
-
-        assertData({'foo': True}, '{"foo": true}')
-        assertData({'foo': None}, '{"foo": null}')
-        assertData("foo", '"foo"')
-        assertData(1, '1')
+        """Test the data field is really JSON."""
+        token = RequestToken(data={"foo": true})
+        token.save()
+        self.assertTrue(token.data['foo'])
 
     def test_clean(self):
         token = RequestToken(
