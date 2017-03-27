@@ -125,7 +125,7 @@ class RequestTokenTests(TestCase):
 
     def test_json(self):
         """Test the data field is really JSON."""
-        token = RequestToken(data={"foo": true})
+        token = RequestToken(data={"foo": True})
         token.save()
         self.assertTrue(token.data['foo'])
 
@@ -189,7 +189,7 @@ class RequestTokenTests(TestCase):
         self.assertEqual(log.user, None)
         self.assertEqual(log.token, token)
         self.assertEqual(log.user_agent, 'unknown')
-        self.assertEqual(log.client_ip, 'unknown')
+        self.assertEqual(log.client_ip, None)
         self.assertEqual(log.status_code, 123)
         assertUsedToDate(1)
 

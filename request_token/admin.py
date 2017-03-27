@@ -21,7 +21,7 @@ def pretty_print(data):
         indent=4,
         separators=(',', ': ')
     )
-    return mark_safe("<code>%s</code>" % pretty.replace(" ", "&nbsp;"))
+    return mark_safe("<pre><code>%s</code></pre>" % pretty.replace(" ", "&nbsp;"))
 
 
 class RequestTokenAdmin(admin.ModelAdmin):
@@ -38,7 +38,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
         'issued_at',
         'is_valid'
     )
-    readonly_fields = ('issued_at', 'jwt', '_parsed', '_claims', '_json')
+    readonly_fields = ('issued_at', 'jwt', '_parsed', '_claims', '_data')
     search_fields = ('user__first_name', 'user__username')
     raw_id_fields = ('user',)
 
@@ -47,10 +47,10 @@ class RequestTokenAdmin(admin.ModelAdmin):
 
     _claims.short_description = "JWT (decoded)"
 
-    def _json(self, obj):
-        return pretty_print(obj.json)
+    def _data(self, obj):
+        return pretty_print(obj.data)
 
-    _json.short_description = "Data (JSON)"
+    _data.short_description = "Data (JSON)"
 
     def jwt(self, obj):
         try:

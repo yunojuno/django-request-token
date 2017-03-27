@@ -24,7 +24,7 @@ class AdminTests(TestCase):
         self.assertEqual(pretty_print(None), None)
         self.assertEqual(
             pretty_print({'foo': True}),
-            '<code>{\n&nbsp;&nbsp;&nbsp;&nbsp;"foo":&nbsp;true\n}</code>'
+            '<pre><code>{\n&nbsp;&nbsp;&nbsp;&nbsp;"foo":&nbsp;true\n}</code></pre>'
         )
 
 
@@ -70,11 +70,6 @@ class RequestTokenAdminTests(TestCase):
         token = RequestToken(id=1, scope='foo').save()
         admin = RequestTokenAdmin(RequestToken, None)
         self.assertEqual(admin._claims(token), pretty_print(token.claims))
-
-    def test_json(self):
-        token = RequestToken(id=1, scope='foo', data='{"foo": true}').save()
-        admin = RequestTokenAdmin(RequestToken, None)
-        self.assertEqual(admin._json(token), pretty_print(token.json))
 
     def test_parsed(self):
         token = RequestToken(id=1, scope='foo', data='{"foo": true}').save()

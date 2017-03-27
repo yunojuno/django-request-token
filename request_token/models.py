@@ -310,7 +310,7 @@ class RequestToken(models.Model):
         )
         meta = request.META
         xff = parse_xff(meta.get('HTTP_X_FORWARDED_FOR'))
-        client_ip = xff or meta.get('REMOTE_ADDR', 'unknown')
+        client_ip = xff or meta.get('REMOTE_ADDR', None)
         user = None if request.user.is_anonymous() else request.user
         rtu = RequestTokenLog(
             token=self,
@@ -320,7 +320,7 @@ class RequestToken(models.Model):
             status_code=response.status_code
         ).save()
         # NB this could already be out-of-date
-        self.used_to_date = models.F('used_to_date') + 1
+        self.used_to_date = self.logs.count()
         self.save()
         return rtu
 
@@ -351,6 +351,7 @@ class RequestTokenLog(models.Model):
 
     token = models.ForeignKey(
         RequestToken,
+        related_name='logs',
         help_text="The RequestToken that was used.",
         db_index=True
     )
