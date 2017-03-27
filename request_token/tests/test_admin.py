@@ -24,7 +24,7 @@ class AdminTests(TestCase):
         self.assertEqual(pretty_print(None), None)
         self.assertEqual(
             pretty_print({'foo': True}),
-            '<pre><code>{\n&nbsp;&nbsp;&nbsp;&nbsp;"foo":&nbsp;true\n}</code></pre>'
+            '<pre><code>{<br>&nbsp;&nbsp;&nbsp;&nbsp;"foo":&nbsp;true<br>}</code></pre>'
         )
 
 

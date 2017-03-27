@@ -21,7 +21,8 @@ def pretty_print(data):
         indent=4,
         separators=(',', ': ')
     )
-    return mark_safe("<pre><code>%s</code></pre>" % pretty.replace(" ", "&nbsp;"))
+    html = pretty.replace(" ", "&nbsp;").replace("\n", "<br>")
+    return mark_safe("<pre><code>%s</code></pre>" % html)
 
 
 class RequestTokenAdmin(admin.ModelAdmin):
