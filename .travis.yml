@@ -1,17 +1,10 @@
 language:
-    python
-
+  python
 python:
-    2.7
-
+  2.7
 addons:
-    postgresql: "9.4"
-
+  postgresql: "9.4"
 install:
-    pip install tox codecov
-
+  pip install tox
 script:
-    tox
-
-after_success:
-    bash <(curl -s https://codecov.io/bash)
+  tox

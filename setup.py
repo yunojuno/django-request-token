@@ -13,7 +13,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name="django-request-token",
-    version="0.5.1",
+    version="0.5.2-dev",
     packages=find_packages(),
     install_requires=REQUIREMENTS,
     include_package_data=True,
@@ -21,8 +21,8 @@ setup(
     license='MIT',
     long_description=README,
     url='https://github.com/yunojuno/django-request-token',
-    author='Hugo Rodger-Brown',
-    author_email='hugo@yunojuno.com',
+    author='YunoJuno',
+    author_email='code@yunojuno.com',
     maintainer='Hugo Rodger-Brown',
     maintainer_email='hugo@yunojuno.com',
     classifiers=[
@@ -33,7 +33,6 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.4',
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
     ],
