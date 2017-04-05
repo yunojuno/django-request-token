@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """request_token middleware tests."""
-import mock
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser

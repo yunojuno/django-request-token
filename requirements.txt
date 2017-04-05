@@ -1,4 +1,4 @@
-Django>=1.9
+Django>=1.11
 PyJWT==1.4.0
 sqlparse==0.2.2
 psycopg2==2.7.1

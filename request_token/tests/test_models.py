@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """request_token model tests."""
 import datetime
-import mock
+from unittest import mock
 import six
 
 from jwt.exceptions import InvalidAudienceError

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import datetime
-import mock
+from unittest import mock
 
 from jwt.exceptions import MissingRequiredClaimError
 

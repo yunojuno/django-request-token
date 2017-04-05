@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """request_token decorator tests."""
-import mock
+from unittest import mock
 
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse, HttpResponseForbidden
