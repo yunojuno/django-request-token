@@ -29,8 +29,8 @@ class RequestTokenTests(TestCase):
         # ensure user has unicode chars
         self.user = get_user_model().objects.create_user(
             'zoidberg',
-            first_name=u'ß∂ƒ©˙∆',
-            last_name=u'ƒ∆'
+            first_name='ß∂ƒ©˙∆',
+            last_name='ƒ∆'
         )
 
     def test_defaults(self):
@@ -50,7 +50,7 @@ class RequestTokenTests(TestCase):
         self.assertIsNotNone(str(token))
         self.assertIsNotNone(repr(token))
         if six.PY2:
-            self.assertIsNotNone(unicode(token))
+            self.assertIsNotNone(str(token))
 
     def test_save(self):
         token = RequestToken().save()
@@ -341,8 +341,8 @@ class RequestTokenLogTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(
             'zoidberg',
-            first_name=u'∂ƒ©˙∆',
-            last_name=u'†¥¨^'
+            first_name='∂ƒ©˙∆',
+            last_name='†¥¨^'
         )
         self.token = RequestToken.objects.create_token(
             scope='foo',
@@ -365,7 +365,7 @@ class RequestTokenLogTests(TestCase):
         self.assertIsNotNone(str(token))
         self.assertIsNotNone(repr(token))
         if six.PY2:
-            self.assertIsNotNone(unicode(token))
+            self.assertIsNotNone(str(token))
 
     def test_string_repr(self):
         log = RequestTokenLog(
@@ -375,13 +375,13 @@ class RequestTokenLogTests(TestCase):
         self.assertIsNotNone(str(log))
         self.assertIsNotNone(repr(log))
         if six.PY2:
-            self.assertIsNotNone(unicode(log))
+            self.assertIsNotNone(str(log))
 
         log.user = None
         self.assertIsNotNone(str(log))
         self.assertIsNotNone(repr(log))
         if six.PY2:
-            self.assertIsNotNone(unicode(log))
+            self.assertIsNotNone(str(log))
 
     def test_save(self):
         log = RequestTokenLog(

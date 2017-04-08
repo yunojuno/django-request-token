@@ -121,7 +121,7 @@ class RequestToken(models.Model):
         return "Request token #%s" % (self.id)
 
     def __repr__(self):
-        return u"<RequestToken id=%s scope=%s login_mode='%s'>" % (
+        return "<RequestToken id=%s scope=%s login_mode='%s'>" % (
             self.id, self.scope, self.login_mode)
 
     @property
@@ -184,25 +184,25 @@ class RequestToken(models.Model):
         if self.login_mode == RequestToken.LOGIN_MODE_NONE:
             if self.user is not None:
                 raise ValidationError(
-                    {'user': u"User must be None if login_mode is LOGIN_MODE_NONE."}
+                    {'user': "User must be None if login_mode is LOGIN_MODE_NONE."}
                 )
         if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
             if self.user is None:
                 raise ValidationError(
-                    {'user': u"Session token must have a user."}
+                    {'user': "Session token must have a user."}
                 )
             if self.max_uses != 1:
                 raise ValidationError(
-                    {'max_uses': u"Session token must have max_use of 1."}
+                    {'max_uses': "Session token must have max_use of 1."}
                 )
             if self.expiration_time is None:
                 raise ValidationError(
-                    {'expiration_time': u"Session token must have an expiration_time."}
+                    {'expiration_time': "Session token must have an expiration_time."}
                 )
         if self.login_mode == RequestToken.LOGIN_MODE_REQUEST:
             if self.user is None:
                 raise ValidationError(
-                    {'expiration_time': u"Request token must have a user."}
+                    {'expiration_time': "Request token must have a user."}
                 )
 
     def save(self, *args, **kwargs):
@@ -229,26 +229,26 @@ class RequestToken(models.Model):
         """
         if self.used_to_date >= self.max_uses:
             raise MaxUseError(
-                u"RequestToken [%s] has exceeded max uses" % self.id
+                "RequestToken [%s] has exceeded max uses" % self.id
             )
 
     def _auth_is_anonymous(self, request):
         """Authenticate anonymous requests."""
-        assert request.user.is_anonymous(), u"User is authenticated."
+        assert request.user.is_anonymous(), "User is authenticated."
 
         if self.login_mode == RequestToken.LOGIN_MODE_NONE:
             pass
 
         if self.login_mode == RequestToken.LOGIN_MODE_REQUEST:
             logger.debug(
-                u"Setting request.user to %r from token %i.",
+                "Setting request.user to %r from token %i.",
                 self.user, self.id
             )
             request.user = self.user
 
         if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
             logger.debug(
-                u"Authenticating request.user as %r from token %i.",
+                "Authenticating request.user as %r from token %i.",
                 self.user, self.id
             )
             # I _think_ we can get away with this as we are pulling the
@@ -261,7 +261,7 @@ class RequestToken(models.Model):
 
     def _auth_is_authenticated(self, request):
         """Authenticate requests with existing users."""
-        assert request.user.is_authenticated(), u"User is anonymous."
+        assert request.user.is_authenticated(), "User is anonymous."
 
         if self.login_mode == RequestToken.LOGIN_MODE_NONE:
             return request
@@ -390,7 +390,7 @@ class RequestTokenLog(models.Model):
             return "%s used by %s at %s" % (self.token, self.user, self.timestamp)
 
     def __repr__(self):
-        return u"<RequestTokenLog id=%s token=%s timestamp='%s'>" % (
+        return "<RequestTokenLog id=%s token=%s timestamp='%s'>" % (
             self.id, self.token.id, self.timestamp)
 
     def save(self, *args, **kwargs):

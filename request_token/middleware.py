@@ -87,7 +87,7 @@ class RequestTokenMiddleware(MiddlewareMixin):
                 response = HttpResponseForbidden(html)
             else:
                 response = HttpResponseForbidden(
-                    u"Temporary link token error (code: %s)" % key
+                    "Temporary link token error (code: %s)" % key
                 )
             response.error = ex
             return response
