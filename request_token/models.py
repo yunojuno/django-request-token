@@ -3,6 +3,7 @@
 import datetime
 import logging
 
+from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import JSONField
@@ -81,7 +82,7 @@ class RequestToken(models.Model):
         help_text="How should the request be authenticated?"
     )
     user = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         blank=True, null=True,
         help_text="Intended recipient of the JWT (can be used by anyone if not set)."
     )
@@ -356,7 +357,7 @@ class RequestTokenLog(models.Model):
         db_index=True
     )
     user = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         blank=True, null=True,
         help_text="The user who made the request (None if anonymous)."
     )
