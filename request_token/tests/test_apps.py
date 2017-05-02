@@ -2,11 +2,8 @@
 from django.template import TemplateDoesNotExist
 from django.test import TestCase
 
+from ..apps import check_template, ImproperlyConfigured
 from ..compat import mock
-from ..apps import (
-    check_template,
-    ImproperlyConfigured,
-)
 
 
 class AppTests(TestCase):
