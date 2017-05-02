@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-"""request_token middleware tests."""
-import mock
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
@@ -9,9 +6,10 @@ from django.test import TestCase, RequestFactory
 
 from jwt import exceptions
 
+from ..compat import mock
+from ..middleware import RequestTokenMiddleware
 from ..models import RequestToken
 from ..settings import JWT_QUERYSTRING_ARG
-from ..middleware import RequestTokenMiddleware
 
 
 class MockSession(object):

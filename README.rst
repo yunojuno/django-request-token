@@ -4,9 +4,6 @@
 .. image:: https://travis-ci.org/yunojuno/django-request-token.svg
     :target: https://travis-ci.org/yunojuno/django-request-token
 
-.. image:: https://codecov.io/gh/yunojuno/django-request-token/branch/master/graph/badge.svg
-    :target: https://codecov.io/gh/yunojuno/django-request-token
-
 Django Request Token
 --------------------
 

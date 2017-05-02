@@ -1,22 +1,15 @@
 # -*- coding: utf-8 -*-
-"""request_token middleware."""
 import logging
 
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
-try:
-    from django.utils.deprecation import MiddlewareMixin
-except ImportError:
-    # Fallback for Django < 1.10
-    MiddlewareMixin = object
-# For rendering  a custom 403-page
 from django.template import loader
 
 from jwt.exceptions import InvalidTokenError
 
+from .compat import MiddlewareMixin
 from .models import RequestToken
 from .settings import JWT_QUERYSTRING_ARG, FOUR03_TEMPLATE
 from .utils import decode
-
 
 logger = logging.getLogger(__name__)
 

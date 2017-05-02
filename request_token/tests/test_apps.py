@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-import mock
-
-from django.test import TestCase
 from django.template import TemplateDoesNotExist
+from django.test import TestCase
 
+from ..compat import mock
 from ..apps import (
     check_template,
     ImproperlyConfigured,

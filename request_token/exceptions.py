@@ -1,6 +1,5 @@
 # -*- coding: utf8 -*-
-"""request_token expections.
-
+"""
 Local exceptions related to tokens inherit from the PyJWT base
 InvalidTokenError.
 

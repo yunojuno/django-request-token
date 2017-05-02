@@ -1,19 +1,14 @@
 # -*- coding: utf-8 -*-
 import datetime
-import mock
 
 from jwt.exceptions import MissingRequiredClaimError
 
 from django.test import TestCase
 from django.utils.timezone import now as tz_now
 
-from ..admin import (
-    pretty_print,
-    RequestTokenAdmin,
-)
-from ..models import (
-    RequestToken,
-)
+from ..admin import pretty_print, RequestTokenAdmin
+from ..compay import mock
+from ..models import RequestToken
 
 
 class AdminTests(TestCase):

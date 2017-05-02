@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-"""request_token.utils tests."""
 import datetime
 
 from jwt import decode as jwt_decode, encode as jwt_encode
@@ -8,7 +7,12 @@ from jwt.exceptions import MissingRequiredClaimError, DecodeError
 from django.conf import settings
 from django.test import TestCase
 
-from request_token.utils import encode, decode, to_seconds, MANDATORY_CLAIMS
+from ..utils import (
+    encode,
+    decode,
+    to_seconds,
+    MANDATORY_CLAIMS
+)
 
 
 class FunctionTests(TestCase):

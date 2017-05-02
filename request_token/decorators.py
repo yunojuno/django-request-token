@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-"""request_token decorators."""
 import functools
 import logging
 

@@ -5,7 +5,6 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth import login
-from django.contrib.auth.models import User
 from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import ValidationError
 from django.db import models, transaction

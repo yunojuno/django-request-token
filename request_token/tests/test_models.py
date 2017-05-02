@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""request_token model tests."""
 import datetime
-import mock
 import six
 
 from jwt.exceptions import InvalidAudienceError
@@ -15,8 +13,9 @@ from django.http import HttpResponse
 from django.test import TestCase, RequestFactory
 from django.utils.timezone import now as tz_now
 
-from ..models import RequestToken, RequestTokenLog, parse_xff
+from ..compat import mock
 from ..exceptions import MaxUseError
+from ..models import RequestToken, RequestTokenLog, parse_xff
 from ..settings import JWT_SESSION_TOKEN_EXPIRY
 from ..utils import to_seconds, decode
 
