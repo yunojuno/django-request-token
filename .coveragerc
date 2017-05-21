@@ -1,0 +1,8 @@
+[run]
+omit =
+  test_app/*
+  request_token/migrations/*
+  request_token/tests/*
+
+include =
+  request_token/*
