@@ -92,24 +92,8 @@ class MiddlewareTests(TestCase):
             request.session = session
             return request
 
-        # has an invalid token
-        request = new_request("foo")  # this won't decode
+        # has an invalid token - it won't decode, so won't get set.
+        request = new_request("foo")
         response = self.middleware.process_request(request)
-        self.assertIsInstance(response, HttpResponseForbidden)
-        self.assertIsInstance(response.error, exceptions.DecodeError)
-        self.assertEqual(response.status_code, 403)
+        self.assertIsNone(response)
         self.assertFalse(hasattr(request, 'token'))
-
-        # test with a FOUR03_TEMPLATE setting
-        from request_token import middleware
-        with mock.patch.multiple(middleware, FOUR03_TEMPLATE='foo.html', loader=mock.Mock()):
-            response = self.middleware.process_request(request)
-            self.assertIsInstance(response, HttpResponseForbidden)
-            self.assertIsInstance(response.error, exceptions.DecodeError)
-            self.assertEqual(response.status_code, 403)
-            self.assertFalse(hasattr(request, 'token'))
-            # this has been mocked out
-            middleware.loader.render_to_string.assert_called_once_with(
-                'foo.html',
-                context={'token_error': 'Temporary link token error: foobar'}
-            )

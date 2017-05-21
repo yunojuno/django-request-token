@@ -48,5 +48,5 @@ def to_seconds(timestamp):
     """Convert timestamp into integers since epoch."""
     try:
         return calendar.timegm(timestamp.utctimetuple())
-    except:
+    except Exception:
         return None

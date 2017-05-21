@@ -56,7 +56,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
     def jwt(self, obj):
         try:
             return obj.jwt()
-        except:
+        except Exception:
             return None
 
     jwt.short_description = "JWT"
@@ -69,7 +69,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
                 "claims": jwt[1],
                 "signature": jwt[2]
             })
-        except:
+        except Exception:
             return None
 
     _parsed.short_description = "JWT (parsed)"
@@ -103,6 +103,7 @@ class RequestTokenLogAdmin(admin.ModelAdmin):
     )
     search_fields = ('user__first_name', 'user__username')
     raw_id_fields = ('user', 'token')
+    list_filters = ('status_code',)
 
 
 admin.site.register(RequestTokenLog, RequestTokenLogAdmin)

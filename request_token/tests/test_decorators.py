@@ -4,7 +4,7 @@ from django.http import HttpResponse, HttpResponseForbidden
 from django.test import TestCase, RequestFactory
 
 from ..compat import mock
-from ..decorators import use_request_token, respond_to_error
+from ..decorators import use_request_token
 from ..exceptions import ScopeError, TokenNotFoundError
 from ..middleware import RequestTokenMiddleware
 from ..models import RequestToken, RequestTokenLog
@@ -43,25 +43,25 @@ class DecoratorTests(TestCase):
         self.middleware.process_request(request)
         return request
 
-    def test_respond_to_error(self):
-        ex = Exception("foo")
-        response = respond_to_error("bar", ex)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.error, ex)
+    # def test_respond_to_error(self):
+    #     ex = Exception("foo")
+    #     response = respond_to_error("bar", ex)
+    #     self.assertEqual(response.status_code, 403)
+    #     self.assertEqual(response.error, ex)
 
-        from request_token import decorators
-        with mock.patch.multiple(
-            decorators,
-            loader=mock.Mock(),
-            FOUR03_TEMPLATE='foo.html'
-        ):
-            response = respond_to_error("bar", ex)
-            self.assertEqual(response.status_code, 403)
-            self.assertEqual(response.error, ex)
-            decorators.loader.render_to_string.assert_called_once_with(
-                'foo.html',
-                context={'token_error': 'Invalid URL token: bar'}
-            )
+    #     from request_token import decorators
+    #     with mock.patch.multiple(
+    #         decorators,
+    #         loader=mock.Mock(),
+    #         FOUR03_TEMPLATE='foo.html'
+    #     ):
+    #         response = respond_to_error("bar", ex)
+    #         self.assertEqual(response.status_code, 403)
+    #         self.assertEqual(response.error, ex)
+    #         decorators.loader.render_to_string.assert_called_once_with(
+    #             'foo.html',
+    #             context={'token_error': 'Invalid URL token: bar'}
+    #         )
 
     def test_no_token(self):
         request = self._request('/', None, AnonymousUser())
@@ -75,16 +75,12 @@ class DecoratorTests(TestCase):
         def test_view_func2(request):
             pass
 
-        response = test_view_func2(request)
-        self.assertIsInstance(response, HttpResponseForbidden)
-        self.assertIsInstance(response.error, TokenNotFoundError)
+        self.assertRaises(TokenNotFoundError, test_view_func2, request)
 
     def test_scope(self):
         token = RequestToken.objects.create_token(scope="foobar")
         request = self._request('/', token.jwt(), AnonymousUser())
-        response = test_view_func(request)
-        self.assertIsInstance(response, HttpResponseForbidden)
-        self.assertIsInstance(response.error, ScopeError)
+        self.assertRaises(ScopeError, test_view_func, request)
         self.assertFalse(RequestTokenLog.objects.exists())
 
         RequestToken.objects.all().update(scope="foo")
