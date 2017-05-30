@@ -439,4 +439,4 @@ class RequestTokenErrorLog(models.Model):
     objects = RequestTokenErrorLogQuerySet().as_manager()
 
     def __str__(self):
-        return self.error
+        return self.error_message

@@ -30,7 +30,7 @@ def use_request_token(view_func=None, scope=None, required=False):
     https://blogs.it.ox.ac.uk/inapickle/2012/01/05/python-decorators-with-optional-arguments/
 
     """
-    assert scope not in ('', None), "Decorator scope cannot be empty."
+    assert scope, "Decorator scope cannot be empty."
 
     if view_func is None:
         return functools.partial(use_request_token, scope=scope, required=required)

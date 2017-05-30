@@ -73,17 +73,22 @@ class RequestTokenMiddleware(MiddlewareMixin):
     def process_exception(self, request, exception):
         """Handle all InvalidTokenErrors."""
         if isinstance(exception, InvalidTokenError):
-            token = request.token
             logger.exception("JWT request token error")
-            if FOUR03_TEMPLATE:
-                html = loader.render_to_string(
-                    FOUR03_TEMPLATE,
-                    context={'token_error': str(exception)}
-                )
-                response = HttpResponseForbidden(html, reason=str(exception))
-            else:
-                response = HttpResponseForbidden(reason=str(exception))
+            response = _403(exception)
+            token = request.token
             # we log it here because we know that it will not have been logged
             # in the decorator, and we want the error logged
             token.log(request, response, error=exception)
             return response
+
+
+def _403(exception):
+    """Render HttpResponseForbidden for exception."""
+    if FOUR03_TEMPLATE:
+        html = loader.render_to_string(
+            FOUR03_TEMPLATE,
+            context={'token_error': str(exception)}
+        )
+        return HttpResponseForbidden(html, reason=str(exception))
+    else:
+        return HttpResponseForbidden(reason=str(exception))
