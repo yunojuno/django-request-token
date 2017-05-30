@@ -74,6 +74,7 @@ class MiddlewareTests(TestCase):
         request.session = MockSession()
         response = self.middleware.process_request(request)
         self.assertIsInstance(response, HttpResponseNotAllowed)
+        self.assertFalse(hasattr(request, 'token'))
         self.assertEqual(response.status_code, 405)
 
     @mock.patch('request_token.middleware.logger')
@@ -84,7 +85,7 @@ class MiddlewareTests(TestCase):
         request.session = MockSession()
         response = self.middleware.process_request(request)
         self.assertIsNone(response)
-        self.assertFalse(hasattr(request, 'token'))
+        self.assertIsNone(request.token)
         self.assertEqual(mock_logger.exception.call_count, 1)
 
     @mock.patch('request_token.middleware.logger')
@@ -93,7 +94,7 @@ class MiddlewareTests(TestCase):
         self.token.delete()
         response = self.middleware.process_request(request)
         self.assertIsNone(response)
-        self.assertFalse(hasattr(request, 'token'))
+        self.assertIsNone(request.token)
         self.assertEqual(mock_logger.exception.call_count, 1)
 
     @mock.patch.object(RequestToken, 'log')
@@ -103,6 +104,16 @@ class MiddlewareTests(TestCase):
         exception = exceptions.InvalidTokenError("bar")
         response = self.middleware.process_exception(request, exception)
         mock_log.assert_called_once_with(request, response, error=exception)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.reason_phrase, str(exception))
+
+        # no request token = no error log
+        del request.token
+        mock_log.reset_mock()
+        response = self.middleware.process_exception(request, exception)
+        self.assertEqual(mock_log.call_count, 0)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.reason_phrase, str(exception))
 
         # round it out with a non-token error
         response = self.middleware.process_exception(request, Exception("foo"))

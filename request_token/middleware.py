@@ -66,8 +66,10 @@ class RequestTokenMiddleware(MiddlewareMixin):
             payload = decode(token)
             request.token = RequestToken.objects.get(id=payload['jti'])
         except RequestToken.DoesNotExist:
+            request.token = None
             logger.exception("RequestToken no longer exists: %s", payload['jti'])
         except InvalidTokenError:
+            request.token = None
             logger.exception("RequestToken cannot be decoded: %s", token)
 
     def process_exception(self, request, exception):
@@ -75,10 +77,8 @@ class RequestTokenMiddleware(MiddlewareMixin):
         if isinstance(exception, InvalidTokenError):
             logger.exception("JWT request token error")
             response = _403(exception)
-            token = request.token
-            # we log it here because we know that it will not have been logged
-            # in the decorator, and we want the error logged
-            token.log(request, response, error=exception)
+            if hasattr(request, 'token'):
+                request.token.log(request, response, error=exception)
             return response
 
 
