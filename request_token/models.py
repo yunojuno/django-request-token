@@ -14,7 +14,7 @@ from django.utils.timezone import now as tz_now
 from jwt.exceptions import InvalidAudienceError
 
 from .exceptions import MaxUseError
-from .settings import JWT_SESSION_TOKEN_EXPIRY
+from .settings import JWT_SESSION_TOKEN_EXPIRY, LOG_TOKEN_ERRORS
 from .utils import to_seconds, encode
 
 logger = logging.getLogger(__name__)
@@ -117,6 +117,10 @@ class RequestToken(models.Model):
     )
 
     objects = RequestTokenQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = "Token"
+        verbose_name_plural = "Tokens"
 
     def __str__(self):
         return "Request token #%s" % (self.id)
@@ -314,7 +318,7 @@ class RequestToken(models.Model):
             client_ip=parse_xff(rmg('HTTP_X_FORWARDED_FOR')) or rmg('REMOTE_ADDR', None),
             status_code=response.status_code
         ).save()
-        if error:
+        if error and LOG_TOKEN_ERRORS:
             RequestTokenErrorLog.objects.create_error_log(log, error)
         # NB this will include all error logs - which means that an error log
         # may prohibit further use of the token. Is there a scenario in which
@@ -379,8 +383,8 @@ class RequestTokenLog(models.Model):
     )
 
     class Meta:
-        verbose_name = "Token use"
-        verbose_name_plural = "Token use logs"
+        verbose_name = "Log"
+        verbose_name_plural = "Logs"
 
     def __str__(self):
         if self.user is None:
@@ -438,5 +442,13 @@ class RequestTokenErrorLog(models.Model):
 
     objects = RequestTokenErrorLogQuerySet().as_manager()
 
+    class Meta:
+        verbose_name = "Error"
+        verbose_name_plural = "Errors"
+
     def __str__(self):
         return self.error_message
+
+    def save(self, *args, **kwargs):
+        super(RequestTokenErrorLog, self).save(*args, **kwargs)
+        return self
