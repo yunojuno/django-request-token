@@ -307,19 +307,33 @@ in production with a setting like:
 
     FOUR03_TEMPLATE = os.path.join(BASE_DIR,'...','403.html')
 
+* ``REQUEST_TOKEN_LOG_TOKEN_ERRORS``
+
+If an ``InvalidTokenError`` is raised by the decorator or middleware, the error
+will be logged as a ``RequestTokenErrorLog`` object. This makes debugging
+easier, which is important in production as often the first you will know about
+a token problem is an angry customer who says "my link doesn't work". Being
+able to diagnose issues from the admin site is useful, however if the volume
+or errors is a problem this can be disabled by setting this value to anything
+other than 'True' or '1'.
+
+
 Logging
 =======
 
-Debugging middleware and decorators can be complex, so the project is verbose in
-its logging (by design). If you feel it's providing too much logging, you can
-adjust it by setting the standard Django logging for ``request_token``.
+Debugging middleware and decorators can be complex, so the project is verbose
+in its logging (by design). If you feel it's providing too much logging, you
+can adjust it by setting the standard Django logging for ``request_token``.
+
+You can turn off formal logging in the database of token errors by using the
+setting ``REQUEST_TOKEN_LOG_TOKEN_ERRORS``.
 
 Tests
 =====
 
-There is a set of tests that are configured to run against Django 1.8 using ``tox``.
+There is a set of ``tox`` tests.
 
-Licence
+License
 =======
 
 MIT
