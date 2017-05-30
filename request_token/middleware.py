@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 
 class RequestTokenMiddleware(MiddlewareMixin):
 
-    """Extract and verify request tokens from incoming GET requests.
+    """
+    Extract and verify request tokens from incoming GET requests.
 
     This middleware is used to perform initial JWT verfication of
     link tokens.
@@ -58,29 +59,36 @@ class RequestTokenMiddleware(MiddlewareMixin):
         if request.method != 'GET':
             return HttpResponseNotAllowed(['GET'])
 
+        # in the event of an error we log it, but then let the request
+        # continue - as the fact that the token cannot be decoded, or
+        # no longer exists, may not invalidate the request itself.
         try:
             payload = decode(token)
-            token = RequestToken.objects.get(id=payload['jti'])
-            token.validate_max_uses()
-            token.authenticate(request)
-            request.token = token
+            request.token = RequestToken.objects.get(id=payload['jti'])
+        except RequestToken.DoesNotExist:
+            logger.exception("RequestToken no longer exists: %s", payload['jti'])
+        except InvalidTokenError:
+            logger.exception("RequestToken cannot be decoded: %s", token)
 
-        except (RequestToken.DoesNotExist, InvalidTokenError) as ex:
-            key = request.session.session_key
-            logger.warning(
-                "JWT token error (error code:'%s'): %s", key, ex
-            )
-            if FOUR03_TEMPLATE:
-                html = loader.render_to_string(
-                    FOUR03_TEMPLATE,
-                    context={
-                        'token_error': 'Temporary link token error: %s' % key
-                    }
-                )
-                response = HttpResponseForbidden(html)
-            else:
-                response = HttpResponseForbidden(
-                    u"Temporary link token error (code: %s)" % key
-                )
-            response.error = ex
+    def process_exception(self, request, exception):
+        """Handle all InvalidTokenErrors."""
+        if isinstance(exception, InvalidTokenError):
+            logger.exception("JWT request token error")
+            response = _403(exception)
+            token = request.token
+            # we log it here because we know that it will not have been logged
+            # in the decorator, and we want the error logged
+            token.log(request, response, error=exception)
             return response
+
+
+def _403(exception):
+    """Render HttpResponseForbidden for exception."""
+    if FOUR03_TEMPLATE:
+        html = loader.render_to_string(
+            FOUR03_TEMPLATE,
+            context={'token_error': str(exception)}
+        )
+        return HttpResponseForbidden(html, reason=str(exception))
+    else:
+        return HttpResponseForbidden(reason=str(exception))

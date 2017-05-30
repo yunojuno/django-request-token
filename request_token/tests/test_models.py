@@ -15,7 +15,13 @@ from django.utils.timezone import now as tz_now
 
 from ..compat import mock
 from ..exceptions import MaxUseError
-from ..models import RequestToken, RequestTokenLog, parse_xff
+from ..models import (
+    parse_xff,
+    RequestToken,
+    RequestTokenErrorLog,
+    RequestTokenErrorLogQuerySet,
+    RequestTokenLog,
+)
 from ..settings import JWT_SESSION_TOKEN_EXPIRY
 from ..utils import to_seconds, decode
 
@@ -208,6 +214,13 @@ class RequestTokenTests(TestCase):
         token.refresh_from_db(fields=['used_to_date'])
         assertUsedToDate(4)
 
+        with mock.patch.object(RequestTokenErrorLogQuerySet, 'create_error_log') as mock_log:
+            log = token.log(request, response, MaxUseError('foo'))
+            self.assertEqual(mock_log.call_count, 1)
+            self.assertEqual(log.user_agent, 'test_agent')
+            token.refresh_from_db(fields=['used_to_date'])
+            assertUsedToDate(5)
+
     def test_jwt(self):
         token = RequestToken(id=1, scope='foo').save()
         jwt = token.jwt()
@@ -331,6 +344,31 @@ class RequestTokenQuerySetTests(TestCase):
         self.assertRaises(TypeError, RequestToken.objects.create_token)
         RequestToken.objects.create_token(scope="foo")
         self.assertEqual(RequestToken.objects.get().scope, 'foo')
+
+
+class RequestTokenErrorLogQuerySetTests(TestCase):
+
+    def test_create_error_log(self):
+        user = get_user_model().objects.create_user(
+            'zoidberg',
+            first_name=u'∂ƒ©˙∆',
+            last_name=u'†¥¨^'
+        )
+        token = RequestToken.objects.create_token(
+            scope='foo',
+            user=user,
+            login_mode=RequestToken.LOGIN_MODE_REQUEST
+        )
+        log = RequestTokenLog(token=token, user=user).save()
+        elog = RequestTokenErrorLog.objects.create_error_log(
+            log,
+            MaxUseError('foo')
+        )
+        self.assertEqual(elog.token, token)
+        self.assertEqual(elog.log, log)
+        self.assertEqual(elog.error_type, 'MaxUseError')
+        self.assertEqual(elog.error_message, 'foo')
+        self.assertEqual(str(elog), 'foo')
 
 
 class RequestTokenLogTests(TestCase):

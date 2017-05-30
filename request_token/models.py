@@ -14,7 +14,7 @@ from django.utils.timezone import now as tz_now
 from jwt.exceptions import InvalidAudienceError
 
 from .exceptions import MaxUseError
-from .settings import JWT_SESSION_TOKEN_EXPIRY
+from .settings import JWT_SESSION_TOKEN_EXPIRY, LOG_TOKEN_ERRORS
 from .utils import to_seconds, encode
 
 logger = logging.getLogger(__name__)
@@ -82,6 +82,7 @@ class RequestToken(models.Model):
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        related_name="request_tokens",
         blank=True, null=True,
         help_text="Intended recipient of the JWT (can be used by anyone if not set)."
     )
@@ -116,6 +117,10 @@ class RequestToken(models.Model):
     )
 
     objects = RequestTokenQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = "Token"
+        verbose_name_plural = "Tokens"
 
     def __str__(self):
         return "Request token #%s" % (self.id)
@@ -287,7 +292,7 @@ class RequestToken(models.Model):
             return self._auth_is_authenticated(request)
 
     @transaction.atomic
-    def log(self, request, response):
+    def log(self, request, response, error=None):
         """Record the use of a token.
 
         This is used by the decorator to log each time someone uses the token,
@@ -298,31 +303,29 @@ class RequestToken(models.Model):
                 user, ip and user-agenct are extracted.
             response: the corresponding HttpResponse object, from which the status
                 code is extracted.
-            duration: float, the duration of the view function in ms - just because
-                you can never measure too many things.
+            error: an InvalidTokenError that gets logged as a RequestTokenError.
 
         Returns a RequestTokenUse object.
 
         """
-        assert hasattr(request, 'user'), (
-            "Request is missing user property. Please ensure that the Django "
-            "authentication middleware is installed."
-        )
-        meta = request.META
-        xff = parse_xff(meta.get('HTTP_X_FORWARDED_FOR'))
-        client_ip = xff or meta.get('REMOTE_ADDR', None)
-        user = None if request.user.is_anonymous() else request.user
-        rtu = RequestTokenLog(
+        def rmg(key, default=None):
+            return request.META.get(key, default)
+
+        log = RequestTokenLog(
             token=self,
-            user=user,
-            user_agent=meta.get('HTTP_USER_AGENT', 'unknown'),
-            client_ip=client_ip,
+            user=None if request.user.is_anonymous() else request.user,
+            user_agent=rmg('HTTP_USER_AGENT', 'unknown'),
+            client_ip=parse_xff(rmg('HTTP_X_FORWARDED_FOR')) or rmg('REMOTE_ADDR', None),
             status_code=response.status_code
         ).save()
-        # NB this could already be out-of-date
-        self.used_to_date = self.logs.count()
+        if error and LOG_TOKEN_ERRORS:
+            RequestTokenErrorLog.objects.create_error_log(log, error)
+        # NB this will include all error logs - which means that an error log
+        # may prohibit further use of the token. Is there a scenario in which
+        # this would be the wrong outcome?
+        self.used_to_date = self.logs.filter(error__isnull=True).count()
         self.save()
-        return rtu
+        return log
 
 
 def parse_xff(header_value):
@@ -380,8 +383,8 @@ class RequestTokenLog(models.Model):
     )
 
     class Meta:
-        verbose_name = "Token use"
-        verbose_name_plural = "Token use logs"
+        verbose_name = "Log"
+        verbose_name_plural = "Logs"
 
     def __str__(self):
         if self.user is None:
@@ -397,4 +400,55 @@ class RequestTokenLog(models.Model):
         if 'update_fields' not in kwargs:
             self.timestamp = self.timestamp or tz_now()
         super(RequestTokenLog, self).save(*args, **kwargs)
+        return self
+
+
+class RequestTokenErrorLogQuerySet(models.query.QuerySet):
+
+    def create_error_log(self, log, error):
+        return RequestTokenErrorLog(
+            token=log.token,
+            log=log,
+            error_type=type(error).__name__,
+            error_message=str(error)
+        )
+
+
+@python_2_unicode_compatible
+class RequestTokenErrorLog(models.Model):
+
+    """Used to log errors that occur with the use of a RequestToken."""
+
+    token = models.ForeignKey(
+        RequestToken,
+        related_name='errors',
+        help_text="The RequestToken that was used.",
+        db_index=True
+    )
+    log = models.OneToOneField(
+        RequestTokenLog,
+        related_name='error',
+        help_text="The token use against which the error occurred.",
+        db_index=True
+    )
+    error_type = models.CharField(
+        max_length=50,
+        help_text="The underlying type of error raised."
+    )
+    error_message = models.CharField(
+        max_length=200,
+        help_text="The error message supplied."
+    )
+
+    objects = RequestTokenErrorLogQuerySet().as_manager()
+
+    class Meta:
+        verbose_name = "Error"
+        verbose_name_plural = "Errors"
+
+    def __str__(self):
+        return self.error_message
+
+    def save(self, *args, **kwargs):
+        super(RequestTokenErrorLog, self).save(*args, **kwargs)
         return self

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.http import HttpResponseForbidden, HttpResponseNotAllowed
+from django.http import HttpResponseNotAllowed, HttpResponseForbidden
 from django.test import TestCase, RequestFactory
 
 from jwt import exceptions
@@ -29,6 +29,14 @@ class MiddlewareTests(TestCase):
         self.user = get_user_model().objects.create_user('zoidberg')
         self.factory = RequestFactory()
         self.middleware = RequestTokenMiddleware()
+        self.token = RequestToken.objects.create_token(scope="foo")
+
+    def get_request(self):
+        request = self.factory.get('/?%s=%s' % (JWT_QUERYSTRING_ARG, self.token.jwt()))
+        request.user = self.user
+        request.session = MockSession()
+        # request.token = self.token
+        return request
 
     def test_process_request_assertions(self):
         request = self.factory.get('/')
@@ -53,63 +61,49 @@ class MiddlewareTests(TestCase):
         self.assertIsNone(process_request(request))
         self.assertFalse(hasattr(request, 'token'))
 
-    def test_process_request_with_token(self):
-
-        def new_request(jwt, user=self.user, session=MockSession()):
-            request = self.factory.get('/?%s=%s' % (JWT_QUERYSTRING_ARG, jwt))
-            request.user = user
-            request.session = session
-            return request
-
-        # has a valid token
-        token = RequestToken.objects.create_token(scope="foo")
-        request = new_request(token.jwt())
-        self.assertIsNone(self.middleware.process_request(request))
-        self.assertEqual(request.token, token)
+    def test_process_request_with_valid_token(self):
+        request = self.get_request()
+        response = self.middleware.process_request(request)
+        self.assertIsNone(response)
+        self.assertEqual(request.token, self.token)
 
     def test_process_request_not_allowed(self):
-
-        def new_request(jwt, user=self.user, session=MockSession()):
-            request = self.factory.post('/?%s=%s' % (JWT_QUERYSTRING_ARG, jwt))
-            request.user = user
-            request.session = session
-            return request
-
-        # has a valid token
-        token = RequestToken(id=1, scope="foo")
-        request = new_request(token.jwt())
+        # POST requests not allowed
+        request = self.factory.post('/?rt=foo')
+        request.user = self.user
+        request.session = MockSession()
         response = self.middleware.process_request(request)
         self.assertIsInstance(response, HttpResponseNotAllowed)
-        self.assertFalse(hasattr(response, 'error'))
-        self.assertFalse(hasattr(request, 'token'))
         self.assertEqual(response.status_code, 405)
 
-    def test_process_request_forbidden(self):
-
-        def new_request(jwt, user=self.user, session=MockSession()):
-            request = self.factory.get('/?%s=%s' % (JWT_QUERYSTRING_ARG, jwt))
-            request.user = user
-            request.session = session
-            return request
-
-        # has an invalid token
-        request = new_request("foo")  # this won't decode
+    @mock.patch('request_token.middleware.logger')
+    def test_process_request_token_error(self, mock_logger):
+        # token decode error - request passes through _without_ a token
+        request = self.factory.get('/?rt=foo')
+        request.user = self.user
+        request.session = MockSession()
         response = self.middleware.process_request(request)
-        self.assertIsInstance(response, HttpResponseForbidden)
-        self.assertIsInstance(response.error, exceptions.DecodeError)
-        self.assertEqual(response.status_code, 403)
+        self.assertIsNone(response)
         self.assertFalse(hasattr(request, 'token'))
+        self.assertEqual(mock_logger.exception.call_count, 1)
 
-        # test with a FOUR03_TEMPLATE setting
-        from request_token import middleware
-        with mock.patch.multiple(middleware, FOUR03_TEMPLATE='foo.html', loader=mock.Mock()):
-            response = self.middleware.process_request(request)
-            self.assertIsInstance(response, HttpResponseForbidden)
-            self.assertIsInstance(response.error, exceptions.DecodeError)
-            self.assertEqual(response.status_code, 403)
-            self.assertFalse(hasattr(request, 'token'))
-            # this has been mocked out
-            middleware.loader.render_to_string.assert_called_once_with(
-                'foo.html',
-                context={'token_error': 'Temporary link token error: foobar'}
-            )
+    @mock.patch('request_token.middleware.logger')
+    def test_process_request_token_does_not_exist(self, mock_logger):
+        request = self.get_request()
+        self.token.delete()
+        response = self.middleware.process_request(request)
+        self.assertIsNone(response)
+        self.assertFalse(hasattr(request, 'token'))
+        self.assertEqual(mock_logger.exception.call_count, 1)
+
+    @mock.patch.object(RequestToken, 'log')
+    def test_process_exception(self, mock_log):
+        request = self.get_request()
+        request.token = self.token
+        exception = exceptions.InvalidTokenError("bar")
+        response = self.middleware.process_exception(request, exception)
+        mock_log.assert_called_once_with(request, response, error=exception)
+
+        # round it out with a non-token error
+        response = self.middleware.process_exception(request, Exception("foo"))
+        self.assertIsNone(response)
