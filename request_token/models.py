@@ -187,10 +187,7 @@ class RequestToken(models.Model):
     def clean(self):
         """Ensure that login_mode setting is valid."""
         if self.login_mode == RequestToken.LOGIN_MODE_NONE:
-            if self.user is not None:
-                raise ValidationError(
-                    {'user': u"User must be None if login_mode is LOGIN_MODE_NONE."}
-                )
+            pass
         if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
             if self.user is None:
                 raise ValidationError(

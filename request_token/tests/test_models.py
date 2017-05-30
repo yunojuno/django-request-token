@@ -135,14 +135,12 @@ class RequestTokenTests(TestCase):
         self.assertTrue(token.data['foo'])
 
     def test_clean(self):
-        token = RequestToken(
-            login_mode=RequestToken.LOGIN_MODE_NONE,
-            # user=self.user
-        )
+
+        # LOGIN_MODE_NONE doesn't care about user.
+        token = RequestToken(login_mode=RequestToken.LOGIN_MODE_NONE)
         token.clean()
-        # set a user, should now fail validation
         token.user = self.user
-        self.assertRaises(ValidationError, token.clean)
+        token.clean()
 
         # request mode
         token.login_mode = RequestToken.LOGIN_MODE_REQUEST
