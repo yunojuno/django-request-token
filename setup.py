@@ -9,7 +9,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name="django-request-token",
-    version="0.7",
+    version="0.7.1",
     packages=find_packages(),
     install_requires=[
         'Django>=1.9',
