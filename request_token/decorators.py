@@ -2,9 +2,18 @@
 import functools
 import logging
 
+from django.http import HttpRequest
+
 from .exceptions import ScopeError, TokenNotFoundError
 
 logger = logging.getLogger(__name__)
+
+
+def _get_request_arg(*args):
+    """Extract the arg that is an HttpRequest object."""
+    for arg in args:
+        if isinstance(arg, HttpRequest):
+            return arg
 
 
 def use_request_token(view_func=None, scope=None, required=False):
@@ -36,19 +45,23 @@ def use_request_token(view_func=None, scope=None, required=False):
         return functools.partial(use_request_token, scope=scope, required=required)
 
     @functools.wraps(view_func)
-    def inner(request, *args, **kwargs):
-
+    def inner(*args, **kwargs):
+        # HACK: if this is decorating a method, then the first arg will be
+        # the object (self), and not the request. In order to make this work
+        # with functions and methods we need to determine where the request
+        # arg is.
+        request = _get_request_arg(*args)
         token = getattr(request, 'token', None)
         if token is None:
             if required is True:
                 raise TokenNotFoundError()
             else:
-                return view_func(request, *args, **kwargs)
+                return view_func(*args, **kwargs)
         else:
             if token.scope == scope:
                 token.validate_max_uses()
                 token.authenticate(request)
-                response = view_func(request, *args, **kwargs)
+                response = view_func(*args, **kwargs)
                 # this will only log the request here if the view function
                 # returns a valid HttpResponse object - if the view function
                 # raises an error, **or this decorator raises an error**, it

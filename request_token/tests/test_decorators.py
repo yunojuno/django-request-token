@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 from django.contrib.auth.models import AnonymousUser
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponse, HttpRequest
 from django.test import TestCase, RequestFactory
 
-from ..compat import mock
-from ..decorators import use_request_token
+from ..decorators import use_request_token, _get_request_arg
 from ..exceptions import ScopeError, TokenNotFoundError
 from ..middleware import RequestTokenMiddleware
 from ..models import RequestToken, RequestTokenLog
@@ -16,6 +15,15 @@ def test_view_func(request):
     """Return decorated request / response objects."""
     response = HttpResponse("Hello, world!", status=200)
     return response
+
+
+class TestClassBasedView(object):
+
+    @use_request_token(scope="foobar")
+    def test_response(self, request):
+        """Return decorated request / response objects."""
+        response = HttpResponse(str(request.token.id), status=200)
+        return response
 
 
 class MockSession(object):
@@ -43,26 +51,6 @@ class DecoratorTests(TestCase):
         self.middleware.process_request(request)
         return request
 
-    # def test_respond_to_error(self):
-    #     ex = Exception("foo")
-    #     response = respond_to_error("bar", ex)
-    #     self.assertEqual(response.status_code, 403)
-    #     self.assertEqual(response.error, ex)
-
-    #     from request_token import decorators
-    #     with mock.patch.multiple(
-    #         decorators,
-    #         loader=mock.Mock(),
-    #         FOUR03_TEMPLATE='foo.html'
-    #     ):
-    #         response = respond_to_error("bar", ex)
-    #         self.assertEqual(response.status_code, 403)
-    #         self.assertEqual(response.error, ex)
-    #         decorators.loader.render_to_string.assert_called_once_with(
-    #             'foo.html',
-    #             context={'token_error': 'Invalid URL token: bar'}
-    #         )
-
     def test_no_token(self):
         request = self._request('/', None, AnonymousUser())
         response = test_view_func(request)
@@ -88,3 +76,20 @@ class DecoratorTests(TestCase):
         response = test_view_func(request)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(RequestTokenLog.objects.exists())
+
+    def test_class_based_view(self):
+        """Test that CBV methods extract the request correctly."""
+        cbv = TestClassBasedView()
+        token = RequestToken.objects.create_token(scope="foobar")
+        request = self._request('/', token.jwt(), AnonymousUser())
+        response = cbv.test_response(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, str(token.id))
+        self.assertTrue(RequestTokenLog.objects.exists())
+
+    def test__get_request_arg(self):
+        request = HttpRequest()
+        cbv = TestClassBasedView()
+        self.assertEqual(_get_request_arg(request), request)
+        self.assertEqual(_get_request_arg(request, cbv), request)
+        self.assertEqual(_get_request_arg(cbv, request), request)
