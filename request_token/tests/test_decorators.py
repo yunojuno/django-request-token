@@ -84,7 +84,7 @@ class DecoratorTests(TestCase):
         request = self._request('/', token.jwt(), AnonymousUser())
         response = cbv.test_response(request)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, str(token.id))
+        self.assertEqual(int(response.content), token.id)
         self.assertTrue(RequestTokenLog.objects.exists())
 
     def test__get_request_arg(self):
