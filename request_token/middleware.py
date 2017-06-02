@@ -77,7 +77,7 @@ class RequestTokenMiddleware(MiddlewareMixin):
         if isinstance(exception, InvalidTokenError):
             logger.exception("JWT request token error")
             response = _403(exception)
-            if hasattr(request, 'token'):
+            if getattr(request, 'token', None):
                 request.token.log(request, response, error=exception)
             return response
 
