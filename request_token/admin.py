@@ -41,7 +41,12 @@ class RequestTokenAdmin(admin.ModelAdmin):
         'is_valid'
     )
     readonly_fields = ('issued_at', 'jwt', '_parsed', '_claims', '_data')
-    search_fields = ('user__first_name', 'user__username')
+    search_fields = (
+        'user__first_name',
+        'user__last_name',
+        'user__email',
+        'user__username',
+    )
     raw_id_fields = ('user',)
 
     def _claims(self, obj):
