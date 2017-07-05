@@ -14,11 +14,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='requesttoken',
             name='login_mode',
-            field=models.CharField(default=b'None', help_text=b'How should the request be authenticated?', max_length=10, choices=[(b'None', b'Do not authenticate'), (b'Request', b'Authenticate a single request'), (b'Session', b'Authenticate for the entire session')]),
+            field=models.CharField(default='None', help_text='How should the request be authenticated?', max_length=10, choices=[('None', 'Do not authenticate'), ('Request', 'Authenticate a single request'), ('Session', 'Authenticate for the entire session')]),
         ),
         migrations.AlterField(
             model_name='requesttoken',
             name='data',
-            field=models.TextField(default=b'{}', help_text=b'Custom data add to the token, but not encoded (must be fetched from DB).', max_length=1000, blank=True),
+            field=models.TextField(default='{}', help_text='Custom data add to the token, but not encoded (must be fetched from DB).', max_length=1000, blank=True),
         ),
     ]

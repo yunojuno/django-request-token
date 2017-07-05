@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
         model_name='requesttokenlog',
         name='client_ip',
         field=models.GenericIPAddressField(
-            help_text=b'Client IP of device used to make the request.',
+            help_text='Client IP of device used to make the request.',
             null=True,
             unpack_ipv4=True,
             blank=True
