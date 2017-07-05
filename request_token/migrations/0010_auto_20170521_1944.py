@@ -17,6 +17,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='requesttoken',
             name='user',
-            field=models.ForeignKey(blank=True, help_text=b'Intended recipient of the JWT (can be used by anyone if not set).', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='request_tokens', to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(blank=True, help_text='Intended recipient of the JWT (can be used by anyone if not set).', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='request_tokens', to=settings.AUTH_USER_MODEL),
         ),
     ]
