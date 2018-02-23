@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test import TransactionTestCase, Client
 
 from request_token.models import RequestToken, RequestTokenLog
