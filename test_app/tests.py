@@ -4,11 +4,11 @@ from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.core.urlresolvers import reverse
-from django.test import TransactionTestCase, Client
-
+from django.test import Client, TransactionTestCase
+from django.urls import reverse
 from request_token.models import RequestToken, RequestTokenLog
-from request_token.settings import JWT_QUERYSTRING_ARG, JWT_SESSION_TOKEN_EXPIRY
+from request_token.settings import (JWT_QUERYSTRING_ARG,
+                                    JWT_SESSION_TOKEN_EXPIRY)
 
 
 def get_url(url_name, token):

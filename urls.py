@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-from django.conf.urls import url, include
 from django.contrib import admin
+from django.urls import include, path
 
 admin.autodiscover()
 
 urlpatterns = [
-    url(r'^admin/', include(admin.site.urls)),
-    url(r'^testing/', include('test_app.urls', namespace="testing")),
+    path('admin/', admin.site.urls),
+    path('testing/', include('test_app.urls', namespace='testing')),
 ]

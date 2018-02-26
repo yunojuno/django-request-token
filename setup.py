@@ -12,7 +12,7 @@ setup(
     version="0.7.5",
     packages=find_packages(),
     install_requires=[
-        'Django>=1.9',
+        'Django>=2.0',
         'PyJWT>=1.4',
         'sqlparse>=0.2',
         'psycopg2>=2.7'
@@ -29,14 +29,11 @@ setup(
     classifiers=[
         'Environment :: Web Environment',
         'Framework :: Django',
-        'Framework :: Django :: 1.9',
-        'Framework :: Django :: 1.10',
-        'Framework :: Django :: 1.11',
+        'Framework :: Django :: 2.0',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.6',
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
