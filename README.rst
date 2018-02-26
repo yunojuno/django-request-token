@@ -9,6 +9,8 @@ Django Request Token
 
 Django app that uses JWT to manage one-time and expiring tokens to protect URLs.
 
+This fork supports `Django 2.0` and `Python 3.6`
+
 This app currently requires the use of PostgreSQL.
 
 Background
