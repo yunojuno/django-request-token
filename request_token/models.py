@@ -238,7 +238,8 @@ class RequestToken(models.Model):
 
     def _auth_is_anonymous(self, request):
         """Authenticate anonymous requests."""
-        assert request.user.is_anonymous, 'User is authenticated.'
+        if request.user.is_authenticated:
+            raise InvalidAudienceError('Token requires anonymous user.')
 
         if self.login_mode == RequestToken.LOGIN_MODE_NONE:
             pass
@@ -265,7 +266,8 @@ class RequestToken(models.Model):
 
     def _auth_is_authenticated(self, request):
         """Authenticate requests with existing users."""
-        assert request.user.is_authenticated, 'User is anonymous.'
+        if request.user.is_anonymous:
+            raise InvalidAudienceError('Token requires authenticated user.')
 
         if self.login_mode == RequestToken.LOGIN_MODE_NONE:
             return request

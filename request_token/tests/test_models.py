@@ -263,6 +263,10 @@ class RequestTokenTests(TestCase):
         self.assertEqual(request.user, user1)
         self.assertEqual(token.user.backend, 'django.contrib.auth.backends.ModelBackend')
 
+        # authenticated user fails
+        request.user = user1
+        self.assertRaises(InvalidAudienceError, token._auth_is_anonymous, request)
+
     def test__auth_is_authenticated(self):
         factory = RequestFactory()
         middleware = SessionMiddleware()
@@ -294,6 +298,10 @@ class RequestTokenTests(TestCase):
         self.assertEqual(request.user, user1)
 
         token.user = get_user_model().objects.create_user(username="Hyde")
+        self.assertRaises(InvalidAudienceError, token._auth_is_authenticated, request)
+
+        # anonymous user fails
+        request.user = AnonymousUser()
         self.assertRaises(InvalidAudienceError, token._auth_is_authenticated, request)
 
     def test_authenticate(self):
