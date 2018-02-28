@@ -1,12 +1,13 @@
-# -*- coding: utf-8 -*-
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AnonymousUser
-from django.http import HttpResponseNotAllowed, HttpResponseForbidden
-from django.test import TestCase, RequestFactory
+from unittest import mock
 
 from jwt import exceptions
 
-from ..compat import mock
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
+from django.http import HttpResponseNotAllowed
+from django.test import TestCase, RequestFactory
+
+
 from ..middleware import RequestTokenMiddleware
 from ..models import RequestToken
 from ..settings import JWT_QUERYSTRING_ARG
@@ -28,43 +29,37 @@ class MiddlewareTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user('zoidberg')
         self.factory = RequestFactory()
-        self.middleware = RequestTokenMiddleware()
+        self.middleware = RequestTokenMiddleware(get_response=lambda r: r)
         self.token = RequestToken.objects.create_token(scope="foo")
 
     def get_request(self):
         request = self.factory.get('/?%s=%s' % (JWT_QUERYSTRING_ARG, self.token.jwt()))
         request.user = self.user
         request.session = MockSession()
-        # request.token = self.token
         return request
 
     def test_process_request_assertions(self):
         request = self.factory.get('/')
-        middleware = self.middleware
-
-        process_request = middleware.process_request
-        self.assertRaises(AssertionError, process_request, request)
+        self.assertRaises(AssertionError, self.middleware, request)
 
         request.user = AnonymousUser()
-        self.assertRaises(AssertionError, process_request, request)
+        self.assertRaises(AssertionError, self.middleware, request)
         request.session = MockSession()
 
-        self.assertIsNone(process_request(request))
+        self.middleware(request)
         self.assertFalse(hasattr(request, 'token'))
 
     def test_process_request_without_token(self):
         request = self.factory.post('/')
-        process_request = self.middleware.process_request
         request = self.factory.get('/')
         request.user = AnonymousUser()
         request.session = MockSession()
-        self.assertIsNone(process_request(request))
+        self.middleware(request)
         self.assertFalse(hasattr(request, 'token'))
 
     def test_process_request_with_valid_token(self):
         request = self.get_request()
-        response = self.middleware.process_request(request)
-        self.assertIsNone(response)
+        self.middleware(request)
         self.assertEqual(request.token, self.token)
 
     def test_process_request_not_allowed(self):
@@ -72,7 +67,7 @@ class MiddlewareTests(TestCase):
         request = self.factory.post('/?rt=foo')
         request.user = self.user
         request.session = MockSession()
-        response = self.middleware.process_request(request)
+        response = self.middleware(request)
         self.assertIsInstance(response, HttpResponseNotAllowed)
         self.assertFalse(hasattr(request, 'token'))
         self.assertEqual(response.status_code, 405)
@@ -83,8 +78,7 @@ class MiddlewareTests(TestCase):
         request = self.factory.get('/?rt=foo')
         request.user = self.user
         request.session = MockSession()
-        response = self.middleware.process_request(request)
-        self.assertIsNone(response)
+        self.middleware(request)
         self.assertIsNone(request.token)
         self.assertEqual(mock_logger.exception.call_count, 1)
 
@@ -92,8 +86,7 @@ class MiddlewareTests(TestCase):
     def test_process_request_token_does_not_exist(self, mock_logger):
         request = self.get_request()
         self.token.delete()
-        response = self.middleware.process_request(request)
-        self.assertIsNone(response)
+        self.middleware(request)
         self.assertIsNone(request.token)
         self.assertEqual(mock_logger.exception.call_count, 1)
 

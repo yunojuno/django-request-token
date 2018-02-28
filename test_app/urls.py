@@ -1,9 +1,13 @@
-# -*- coding: utf-8 -*-
-from django.conf.urls import url
+try:
+    from django.urls import re_path
+except ImportError:
+    from django.conf.urls import url as re_path
 
 from .views import decorated, undecorated
 
+app_name = 'test_app'
+
 urlpatterns = [
-    url(r'^decorated/$', decorated, name="decorated"),
-    url(r'^undecorated/$', undecorated, name="undecorated"),
+    re_path(r'^decorated/$', decorated, name="decorated"),
+    re_path(r'^undecorated/$', undecorated, name="undecorated"),
 ]

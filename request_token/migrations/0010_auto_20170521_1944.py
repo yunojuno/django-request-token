@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 
 from django.conf import settings
 from django.db import migrations, models
-import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
@@ -17,6 +16,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='requesttoken',
             name='user',
-            field=models.ForeignKey(blank=True, help_text='Intended recipient of the JWT (can be used by anyone if not set).', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='request_tokens', to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(blank=True, help_text='Intended recipient of the JWT (can be used by anyone if not set).', null=True, on_delete=models.deletion.CASCADE, related_name='request_tokens', to=settings.AUTH_USER_MODEL),
         ),
     ]

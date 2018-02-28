@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 import datetime
+from unittest import mock
 
 from jwt.exceptions import MissingRequiredClaimError
 
@@ -7,7 +7,6 @@ from django.test import TestCase
 from django.utils.timezone import now as tz_now
 
 from ..admin import pretty_print, RequestTokenAdmin
-from ..compat import mock
 from ..models import RequestToken
 
 

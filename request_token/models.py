@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """request_token models."""
 from __future__ import unicode_literals
 
@@ -86,6 +85,7 @@ class RequestToken(models.Model):
         settings.AUTH_USER_MODEL,
         related_name="request_tokens",
         blank=True, null=True,
+        on_delete=models.CASCADE,
         help_text="Intended recipient of the JWT (can be used by anyone if not set)."
     )
     scope = models.CharField(
@@ -238,7 +238,7 @@ class RequestToken(models.Model):
 
     def _auth_is_anonymous(self, request):
         """Authenticate anonymous requests."""
-        assert request.user.is_anonymous(), 'User is authenticated.'
+        assert request.user.is_anonymous, 'User is authenticated.'
 
         if self.login_mode == RequestToken.LOGIN_MODE_NONE:
             pass
@@ -265,7 +265,7 @@ class RequestToken(models.Model):
 
     def _auth_is_authenticated(self, request):
         """Authenticate requests with existing users."""
-        assert request.user.is_authenticated(), 'User is anonymous.'
+        assert request.user.is_authenticated, 'User is anonymous.'
 
         if self.login_mode == RequestToken.LOGIN_MODE_NONE:
             return request
@@ -285,7 +285,7 @@ class RequestToken(models.Model):
         has a user assigned, then this will be added to the request.
 
         """
-        if request.user.is_anonymous():
+        if request.user.is_anonymous:
             return self._auth_is_anonymous(request)
         else:
             return self._auth_is_authenticated(request)
@@ -312,7 +312,7 @@ class RequestToken(models.Model):
 
         log = RequestTokenLog(
             token=self,
-            user=None if request.user.is_anonymous() else request.user,
+            user=None if request.user.is_anonymous else request.user,
             user_agent=rmg('HTTP_USER_AGENT', 'unknown'),
             client_ip=parse_xff(rmg('HTTP_X_FORWARDED_FOR')) or rmg('REMOTE_ADDR', None),
             status_code=response.status_code
@@ -355,11 +355,13 @@ class RequestTokenLog(models.Model):
         RequestToken,
         related_name='logs',
         help_text="The RequestToken that was used.",
+        on_delete=models.CASCADE,
         db_index=True
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         blank=True, null=True,
+        on_delete=models.CASCADE,
         help_text="The user who made the request (None if anonymous)."
     )
     user_agent = models.TextField(
@@ -421,12 +423,14 @@ class RequestTokenErrorLog(models.Model):
     token = models.ForeignKey(
         RequestToken,
         related_name='errors',
+        on_delete=models.CASCADE,
         help_text="The RequestToken that was used.",
         db_index=True
     )
     log = models.OneToOneField(
         RequestTokenLog,
         related_name='error',
+        on_delete=models.CASCADE,
         help_text="The token use against which the error occurred.",
         db_index=True
     )

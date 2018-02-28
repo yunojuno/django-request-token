@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from django.apps import AppConfig
 from django.core.exceptions import ImproperlyConfigured
 from django.template import loader, TemplateDoesNotExist

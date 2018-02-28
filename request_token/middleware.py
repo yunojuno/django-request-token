@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import logging
 
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
@@ -6,7 +5,6 @@ from django.template import loader
 
 from jwt.exceptions import InvalidTokenError
 
-from .compat import MiddlewareMixin
 from .models import RequestToken
 from .settings import JWT_QUERYSTRING_ARG, FOUR03_TEMPLATE
 from .utils import decode
@@ -14,7 +12,7 @@ from .utils import decode
 logger = logging.getLogger(__name__)
 
 
-class RequestTokenMiddleware(MiddlewareMixin):
+class RequestTokenMiddleware:
 
     """
     Extract and verify request tokens from incoming GET requests.
@@ -24,7 +22,10 @@ class RequestTokenMiddleware(MiddlewareMixin):
 
     """
 
-    def process_request(self, request):
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
         """Verify JWT request querystring arg.
 
         If a token is found (using JWT_QUERYSTRING_ARG), then it is decoded,
@@ -54,7 +55,7 @@ class RequestTokenMiddleware(MiddlewareMixin):
         token = request.GET.get(JWT_QUERYSTRING_ARG)
 
         if token is None:
-            return
+            return self.get_response(request)
 
         if request.method != 'GET':
             return HttpResponseNotAllowed(['GET'])
@@ -71,6 +72,8 @@ class RequestTokenMiddleware(MiddlewareMixin):
         except InvalidTokenError:
             request.token = None
             logger.exception("RequestToken cannot be decoded: %s", token)
+
+        return self.get_response(request)
 
     def process_exception(self, request, exception):
         """Handle all InvalidTokenErrors."""

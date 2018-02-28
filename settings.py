@@ -7,17 +7,18 @@ import django
 
 
 DJANGO_VERSION = StrictVersion(django.get_version())
+assert DJANGO_VERSION >= StrictVersion('1.11')
 
 DEBUG = True
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': getenv('TEST_DB_NAME', 'test'),
+        'NAME': getenv('TEST_DB_NAME', 'postgres'),
         'USER': getenv('TEST_DB_USER', 'postgres'),
         'PASSWORD': getenv('TEST_DB_PASSWORD', 'postgres'),
         'HOST': getenv('TEST_DB_HOST', 'localhost'),
-        'PORT': getenv('TEST_DB_PORT', '5432'),
+        'PORT': getenv('TEST_DB_PORT', '6432'),
     }
 }
 
@@ -33,19 +34,14 @@ INSTALLED_APPS = (
     'test_app'
 )
 
-_MIDDLEWARE_CLASSES = [
-    'django.contrib.sessions.middleware.SessionMiddleware',
+MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'request_token.middleware.RequestTokenMiddleware',
 ]
-
-if DJANGO_VERSION < StrictVersion('1.10.0'):
-    MIDDLEWARE_CLASSES = _MIDDLEWARE_CLASSES
-else:
-    MIDDLEWARE = _MIDDLEWARE_CLASSES
 
 TEMPLATES = [
     {
@@ -69,6 +65,8 @@ TEMPLATES = [
         },
     },
 ]
+
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 SECRET_KEY = "request_token"
 

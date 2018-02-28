@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Basic encode/decode utils, taken from PyJWT."""
 import calendar
 

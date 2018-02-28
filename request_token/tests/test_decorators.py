@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse, HttpRequest
 from django.test import TestCase, RequestFactory
@@ -41,14 +40,14 @@ class DecoratorTests(TestCase):
 
     def setUp(self):
         self.factory = RequestFactory()
-        self.middleware = RequestTokenMiddleware()
+        self.middleware = RequestTokenMiddleware(get_response=lambda r: r)
 
     def _request(self, path, token, user):
         path = path + "?%s=%s" % (JWT_QUERYSTRING_ARG, token) if token else path
         request = self.factory.get(path)
         request.session = MockSession()
         request.user = user
-        self.middleware.process_request(request)
+        self.middleware(request)
         return request
 
     def test_no_token(self):
