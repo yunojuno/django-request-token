@@ -1,4 +1,3 @@
-# -*- coding: utf8 -*-
 """
 Local exceptions related to tokens inherit from the PyJWT base
 InvalidTokenError.

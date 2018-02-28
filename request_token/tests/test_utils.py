@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import datetime
 
 from jwt import decode as jwt_decode, encode as jwt_encode

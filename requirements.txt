@@ -1,0 +1,6 @@
+# no versions pinned - recommendation is to install your
+# preferred Django version first, then run this requirements file.
+Django
+PyJWT
+sqlparse
+psycopg2

@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """request_token decorator tests."""
 from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.core.urlresolvers import reverse
 from django.test import TransactionTestCase, Client
+from django.urls import reverse
 
 from request_token.models import RequestToken, RequestTokenLog
 from request_token.settings import JWT_QUERYSTRING_ARG, JWT_SESSION_TOKEN_EXPIRY
@@ -13,7 +12,7 @@ from request_token.settings import JWT_QUERYSTRING_ARG, JWT_SESSION_TOKEN_EXPIRY
 
 def get_url(url_name, token):
     """Helper to format urls with tokens."""
-    url = reverse('testing:%s' % url_name)
+    url = reverse('test_app:%s' % url_name)
     if token:
         url += '?%s=%s' % (JWT_QUERYSTRING_ARG, token.jwt())
     return url

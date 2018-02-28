@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 import datetime
-import six
+from unittest import mock
 
 from jwt.exceptions import InvalidAudienceError
 
@@ -13,7 +12,6 @@ from django.http import HttpResponse
 from django.test import TestCase, RequestFactory
 from django.utils.timezone import now as tz_now
 
-from ..compat import mock
 from ..exceptions import MaxUseError
 from ..models import (
     parse_xff,
@@ -54,8 +52,6 @@ class RequestTokenTests(TestCase):
         token = RequestToken(user=self.user)
         self.assertIsNotNone(str(token))
         self.assertIsNotNone(repr(token))
-        if six.PY2:
-            self.assertIsNotNone(unicode(token))
 
     def test_save(self):
         token = RequestToken().save()
@@ -267,6 +263,10 @@ class RequestTokenTests(TestCase):
         self.assertEqual(request.user, user1)
         self.assertEqual(token.user.backend, 'django.contrib.auth.backends.ModelBackend')
 
+        # authenticated user fails
+        request.user = user1
+        self.assertRaises(InvalidAudienceError, token._auth_is_anonymous, request)
+
     def test__auth_is_authenticated(self):
         factory = RequestFactory()
         middleware = SessionMiddleware()
@@ -298,6 +298,10 @@ class RequestTokenTests(TestCase):
         self.assertEqual(request.user, user1)
 
         token.user = get_user_model().objects.create_user(username="Hyde")
+        self.assertRaises(InvalidAudienceError, token._auth_is_authenticated, request)
+
+        # anonymous user fails
+        request.user = AnonymousUser()
         self.assertRaises(InvalidAudienceError, token._auth_is_authenticated, request)
 
     def test_authenticate(self):
@@ -399,8 +403,6 @@ class RequestTokenLogTests(TestCase):
         token = RequestToken(user=self.user)
         self.assertIsNotNone(str(token))
         self.assertIsNotNone(repr(token))
-        if six.PY2:
-            self.assertIsNotNone(unicode(token))
 
     def test_string_repr(self):
         log = RequestTokenLog(
@@ -409,14 +411,10 @@ class RequestTokenLogTests(TestCase):
         )
         self.assertIsNotNone(str(log))
         self.assertIsNotNone(repr(log))
-        if six.PY2:
-            self.assertIsNotNone(unicode(log))
 
         log.user = None
         self.assertIsNotNone(str(log))
         self.assertIsNotNone(repr(log))
-        if six.PY2:
-            self.assertIsNotNone(unicode(log))
 
     def test_save(self):
         log = RequestTokenLog(
