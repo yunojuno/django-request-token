@@ -14,7 +14,7 @@ This app currently requires the use of PostgreSQL.
 Compatibility
 =============
 
-This library is now Python3 and Django1.11 and above only. If you are on Python2 then you will have to refer to the python2 branch.
+This library is now Python3 and Django1.11 and above only.
 
 Background
 ==========
