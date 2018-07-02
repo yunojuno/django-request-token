@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 from setuptools import setup, find_packages
 
@@ -9,7 +8,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name="django-request-token",
-    version="0.8.1",
+    version="0.8.2",
     packages=find_packages(),
     install_requires=[
         'Django>=1.11',

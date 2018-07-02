@@ -79,19 +79,19 @@ class RequestTokenMiddleware:
         """Handle all InvalidTokenErrors."""
         if isinstance(exception, InvalidTokenError):
             logger.exception("JWT request token error")
-            response = _403(exception)
+            response = _403(request, exception)
             if getattr(request, 'token', None):
                 request.token.log(request, response, error=exception)
             return response
 
 
-def _403(exception):
+def _403(request, exception):
     """Render HttpResponseForbidden for exception."""
     if FOUR03_TEMPLATE:
         html = loader.render_to_string(
-            FOUR03_TEMPLATE,
-            context={'token_error': str(exception)}
+            template_name=FOUR03_TEMPLATE,
+            context={'token_error': str(exception)},
+            request=request
         )
         return HttpResponseForbidden(html, reason=str(exception))
-    else:
-        return HttpResponseForbidden(reason=str(exception))
+    return HttpResponseForbidden(reason=str(exception))
