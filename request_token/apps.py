@@ -25,7 +25,4 @@ def check_template(template):
     try:
         loader.get_template(template)
     except TemplateDoesNotExist:
-        raise ImproperlyConfigured(
-            "Custom request token template does not exist: '%s'"
-            % template
-        )
+        raise ImproperlyConfigured(f"Custom request token template does not exist: '{template}'")

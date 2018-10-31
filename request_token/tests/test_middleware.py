@@ -4,7 +4,7 @@ from jwt import exceptions
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.http import HttpResponseNotAllowed
+from django.http import HttpResponse
 from django.test import TestCase, RequestFactory
 
 
@@ -29,11 +29,17 @@ class MiddlewareTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user('zoidberg')
         self.factory = RequestFactory()
-        self.middleware = RequestTokenMiddleware(get_response=lambda r: r)
+        self.middleware = RequestTokenMiddleware(get_response=lambda r: HttpResponse())
         self.token = RequestToken.objects.create_token(scope="foo")
 
     def get_request(self):
         request = self.factory.get('/?%s=%s' % (JWT_QUERYSTRING_ARG, self.token.jwt()))
+        request.user = self.user
+        request.session = MockSession()
+        return request
+
+    def post_request(self):
+        request = self.factory.post('/', {JWT_QUERYSTRING_ARG: self.token.jwt()})
         request.user = self.user
         request.session = MockSession()
         return request
@@ -50,27 +56,30 @@ class MiddlewareTests(TestCase):
         self.assertFalse(hasattr(request, 'token'))
 
     def test_process_request_without_token(self):
-        request = self.factory.post('/')
         request = self.factory.get('/')
         request.user = AnonymousUser()
         request.session = MockSession()
         self.middleware(request)
         self.assertFalse(hasattr(request, 'token'))
 
-    def test_process_request_with_valid_token(self):
+    def test_process_GET_request_with_valid_token(self):
         request = self.get_request()
         self.middleware(request)
         self.assertEqual(request.token, self.token)
 
+    def test_process_POST_request_with_valid_token(self):
+        request = self.post_request()
+        self.middleware(request)
+        self.assertEqual(request.token, self.token)
+
     def test_process_request_not_allowed(self):
-        # POST requests not allowed
-        request = self.factory.post('/?rt=foo')
+        # PUT requests won't decode the token
+        request = self.factory.put('/?rt=foo')
         request.user = self.user
         request.session = MockSession()
         response = self.middleware(request)
-        self.assertIsInstance(response, HttpResponseNotAllowed)
         self.assertFalse(hasattr(request, 'token'))
-        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response.status_code, 200)
 
     @mock.patch('request_token.middleware.logger')
     def test_process_request_token_error(self, mock_logger):
