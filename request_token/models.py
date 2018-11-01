@@ -322,7 +322,7 @@ class RequestToken(models.Model):
         self.save()
         return log
 
-    def invalidate(self):
+    def expire(self):
         """Mark the token as expired immediately, effectively killing the token."""
         self.expiration_time = tz_now() - datetime.timedelta(microseconds=1)
         self.save()

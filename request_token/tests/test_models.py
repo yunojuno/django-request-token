@@ -325,7 +325,7 @@ class RequestTokenTests(TestCase):
         request.user = get_user_model().objects.create_user(username="Hyde")
         self.assertRaises(InvalidAudienceError, token.authenticate, request)
 
-    def test_invalidate(self):
+    def test_expire(self):
         expiry = tz_now() + datetime.timedelta(days=1)
         token = RequestToken.objects.create_token(
             scope="foo",
@@ -333,7 +333,7 @@ class RequestTokenTests(TestCase):
             expiration_time=expiry
         )
         self.assertTrue(token.expiration_time == expiry)
-        token.invalidate()
+        token.expire()
         self.assertTrue(token.expiration_time < expiry)
 
     def test_parse_xff(self):
