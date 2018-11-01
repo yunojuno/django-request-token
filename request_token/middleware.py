@@ -2,7 +2,6 @@ import logging
 
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
 from django.template import loader
-
 from jwt.exceptions import InvalidTokenError
 
 from .models import RequestToken
@@ -52,13 +51,15 @@ class RequestTokenMiddleware:
             "authentication middleware is installed."
         )
 
-        token = request.GET.get(JWT_QUERYSTRING_ARG)
+        if request.method == 'GET':
+            token = request.GET.get(JWT_QUERYSTRING_ARG)
+        elif request.method == 'POST':
+            token = request.POST.get(JWT_QUERYSTRING_ARG)
+        else:
+            token = None
 
         if token is None:
             return self.get_response(request)
-
-        if request.method != 'GET':
-            return HttpResponseNotAllowed(['GET'])
 
         # in the event of an error we log it, but then let the request
         # continue - as the fact that the token cannot be decoded, or

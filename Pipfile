@@ -1,0 +1,16 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+django = "*"
+pyjwt = "*"
+sqlparse = "*"
+"psycopg2" = "*"
+
+[dev-packages]
+tox = "*"
+
+[requires]
+python_version = "3.7"
