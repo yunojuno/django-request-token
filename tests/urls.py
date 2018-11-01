@@ -5,7 +5,7 @@ except ImportError:
 
 from .views import decorated, undecorated, roundtrip
 
-app_name = 'test_app'
+app_name = 'tests'
 
 urlpatterns = [
     re_path(r'^decorated/$', decorated, name="decorated"),

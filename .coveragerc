@@ -1,8 +1,7 @@
 [run]
 omit =
-  test_app/*
+  tests/*
   request_token/migrations/*
-  request_token/tests/*
 
 include =
   request_token/*

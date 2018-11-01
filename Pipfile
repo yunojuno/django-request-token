@@ -4,13 +4,14 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-django = "*"
-pyjwt = "*"
-sqlparse = "*"
-"psycopg2" = "*"
+Django   = ">=1.11"
+PyJWT    = ">=1.4"
+sqlparse = ">=0.2"
+psycopg2-binary = ">=2.7"
 
 [dev-packages]
 tox = "*"
+wheel = "*"
 
 [requires]
-python_version = "3.7"
+python_version = "3.6"

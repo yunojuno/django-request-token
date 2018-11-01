@@ -8,9 +8,9 @@ from django.http import HttpResponse
 from django.test import TestCase, RequestFactory
 
 
-from ..middleware import RequestTokenMiddleware
-from ..models import RequestToken
-from ..settings import JWT_QUERYSTRING_ARG
+from request_token.middleware import RequestTokenMiddleware
+from request_token.models import RequestToken
+from request_token.settings import JWT_QUERYSTRING_ARG
 
 
 class MockSession(object):

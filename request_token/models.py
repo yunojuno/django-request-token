@@ -97,7 +97,7 @@ class RequestToken(models.Model):
     data = JSONField(
         help_text="Custom data add to the token, but not encoded (must be fetched from DB).",
         blank=True, null=True,
-        default=dict()
+        default=dict
     )
     issued_at = models.DateTimeField(
         blank=True, null=True,

@@ -1,4 +1,3 @@
-# -*- coding:utf-8 -*-
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render
 

@@ -2,11 +2,11 @@ from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse, HttpRequest
 from django.test import TestCase, RequestFactory
 
-from ..decorators import use_request_token, _get_request_arg
-from ..exceptions import ScopeError, TokenNotFoundError
-from ..middleware import RequestTokenMiddleware
-from ..models import RequestToken, RequestTokenLog
-from ..settings import JWT_QUERYSTRING_ARG
+from request_token.decorators import use_request_token, _get_request_arg
+from request_token.exceptions import ScopeError, TokenNotFoundError
+from request_token.middleware import RequestTokenMiddleware
+from request_token.models import RequestToken, RequestTokenLog
+from request_token.settings import JWT_QUERYSTRING_ARG
 
 
 @use_request_token(scope="foo")

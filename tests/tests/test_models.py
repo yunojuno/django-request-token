@@ -12,16 +12,16 @@ from django.http import HttpResponse
 from django.test import TestCase, RequestFactory
 from django.utils.timezone import now as tz_now
 
-from ..exceptions import MaxUseError
-from ..models import (
+from request_token.exceptions import MaxUseError
+from request_token.models import (
     parse_xff,
     RequestToken,
     RequestTokenErrorLog,
     RequestTokenErrorLogQuerySet,
     RequestTokenLog,
 )
-from ..settings import JWT_SESSION_TOKEN_EXPIRY
-from ..utils import to_seconds, decode
+from request_token.settings import JWT_SESSION_TOKEN_EXPIRY
+from request_token.utils import to_seconds, decode
 
 
 class RequestTokenTests(TestCase):

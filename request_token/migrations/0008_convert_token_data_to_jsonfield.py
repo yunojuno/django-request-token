@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='requesttoken',
             name='data',
-            field=django.contrib.postgres.fields.jsonb.JSONField(blank=True, default={}, help_text='Custom data add to the token, but not encoded (must be fetched from DB).', null=True),
+            field=django.contrib.postgres.fields.jsonb.JSONField(blank=True, default=dict, help_text='Custom data add to the token, but not encoded (must be fetched from DB).', null=True),
         ),
         migrations.AlterField(
             model_name='requesttokenlog',

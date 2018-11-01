@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-"""request_token default test settings."""
 from distutils.version import StrictVersion
 from os import getenv
 
@@ -25,13 +23,10 @@ DATABASES = {
 INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.messages',
     'django.contrib.sessions',
-    'django.contrib.sites',
-    'django.contrib.staticfiles',
+    'django.contrib.contenttypes',
     'request_token',
-    'test_app'
+    'tests',
 )
 
 MIDDLEWARE = [
@@ -39,7 +34,6 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
     'request_token.middleware.RequestTokenMiddleware',
 ]
 
@@ -52,15 +46,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                # Insert your TEMPLATE_CONTEXT_PROCESSORS here or use this
-                # list if you haven't customized them:
                 'django.contrib.auth.context_processors.auth',
-                'django.template.context_processors.debug',
-                'django.template.context_processors.i18n',
-                'django.template.context_processors.media',
-                'django.template.context_processors.static',
-                'django.template.context_processors.tz',
-                'django.contrib.messages.context_processors.messages',
                 'request_token.context_processors.request_token'
             ],
         },
@@ -71,7 +57,7 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 SECRET_KEY = "request_token"
 
-ROOT_URLCONF = 'urls'
+ROOT_URLCONF = 'tests.urls'
 
 APPEND_SLASH = True
 

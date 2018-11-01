@@ -4,8 +4,8 @@ from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpRequest
 from django.test import TestCase
 
-from ..context_processors import request_token
-from ..models import RequestToken
+from request_token.context_processors import request_token
+from request_token.models import RequestToken
 
 
 @mock.patch.object(RequestToken, 'jwt', lambda t: 'foo')
