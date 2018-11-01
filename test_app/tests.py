@@ -6,7 +6,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.test import TransactionTestCase, Client
 from django.urls import reverse
 
-from request_token.models import RequestToken, RequestTokenLog
+from request_token.models import RequestToken, RequestTokenLog, tz_now
 from request_token.settings import JWT_QUERYSTRING_ARG, JWT_SESSION_TOKEN_EXPIRY
 
 
@@ -69,3 +69,30 @@ class ViewTests(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.request_user, self.user)
         self.assertEqual(RequestTokenLog.objects.count(), 1)
+
+    def test_get_post_token(self):
+        """Test the GET > POST chain."""
+        token = RequestToken.objects.create_token(
+            scope="bar",
+            login_mode=RequestToken.LOGIN_MODE_NONE,
+            max_uses=100
+        )
+        self.assertTrue(token.expiration_time is None)
+        response = self.client.get(get_url('roundtrip', token))
+        token.refresh_from_db()
+        self.assertContains(response, token.jwt(), status_code=200)
+        self.assertTrue(token.expiration_time is None)
+        self.assertEqual(token.used_to_date, 1)
+
+        # now re-post the token to the same URL
+        response = self.client.post(
+            get_url('roundtrip', None), {
+                'rt': token.jwt()
+            }
+        )
+        # sentinel status_code to confirm we've processed the form
+        self.assertContains(response, 'OK', status_code=201)
+        token.refresh_from_db()
+        self.assertFalse(token.expiration_time is None)
+        self.assertTrue(token.expiration_time < tz_now())
+        self.assertEqual(token.used_to_date, 2)
