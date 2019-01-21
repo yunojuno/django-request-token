@@ -91,7 +91,10 @@ def _403(request, exception):
     if FOUR03_TEMPLATE:
         html = loader.render_to_string(
             template_name=FOUR03_TEMPLATE,
-            context={'token_error': str(exception)},
+            context={
+                'token_error': str(exception),
+                'exception': exception
+            },
             request=request
         )
         return HttpResponseForbidden(html, reason=str(exception))
