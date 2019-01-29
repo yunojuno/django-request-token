@@ -1,6 +1,8 @@
 import os
 from setuptools import setup, find_packages
 
+import request_token
+
 README = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
 
 # allow setup.py to be run from any path
@@ -8,7 +10,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name="django-request-token",
-    version="0.9.1",
+    version=request_token.__version__,
     packages=find_packages(exclude=('tests',)),
     install_requires=[
         'Django>=1.11',
