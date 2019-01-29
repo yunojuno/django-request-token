@@ -1,4 +1,5 @@
 import logging
+import json
 
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
 from django.template import loader
@@ -51,10 +52,13 @@ class RequestTokenMiddleware:
             "authentication middleware is installed."
         )
 
-        if request.method == 'GET':
+        if request.method == 'GET' or request.method == 'POST':
             token = request.GET.get(JWT_QUERYSTRING_ARG)
-        elif request.method == 'POST':
-            token = request.POST.get(JWT_QUERYSTRING_ARG)
+            if not token and request.method == 'POST':
+                if request.META.get('CONTENT_TYPE') == 'application/json':
+                    token = json.loads(request.body).get(JWT_QUERYSTRING_ARG)
+                if not token:
+                    token = request.POST.get(JWT_QUERYSTRING_ARG)
         else:
             token = None
 

@@ -1,3 +1,4 @@
+import json
 from unittest import mock
 
 from jwt import exceptions
@@ -44,6 +45,13 @@ class MiddlewareTests(TestCase):
         request.session = MockSession()
         return request
 
+    def post_request_with_JSON(self):
+        data = json.dumps({JWT_QUERYSTRING_ARG: self.token.jwt()})
+        request = self.factory.post('/', data, 'application/json')
+        request.user = self.user
+        request.session = MockSession()
+        return request
+
     def test_process_request_assertions(self):
         request = self.factory.get('/')
         self.assertRaises(AssertionError, self.middleware, request)
@@ -69,6 +77,11 @@ class MiddlewareTests(TestCase):
 
     def test_process_POST_request_with_valid_token(self):
         request = self.post_request()
+        self.middleware(request)
+        self.assertEqual(request.token, self.token)
+
+    def test_process_POST_request_with_valid_token_with_json(self):
+        request = self.post_request_with_JSON()
         self.middleware(request)
         self.assertEqual(request.token, self.token)
 
