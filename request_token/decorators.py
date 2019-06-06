@@ -57,6 +57,10 @@ def use_request_token(view_func=None, scope=None, required=False):
             else:
                 return view_func(*args, **kwargs)
         else:
+            # Check the case when `token` was expired programmatically
+            # using `token.expire()`
+            token.validate_expiration_time()
+
             if token.scope == scope:
                 token.validate_max_uses()
                 token.authenticate(request)

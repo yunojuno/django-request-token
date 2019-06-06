@@ -1,7 +1,7 @@
 import datetime
 from unittest import mock
 
-from jwt.exceptions import InvalidAudienceError
+from jwt.exceptions import InvalidAudienceError, ExpiredSignatureError
 
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.contrib.auth import get_user_model, logout
@@ -335,6 +335,17 @@ class RequestTokenTests(TestCase):
         self.assertTrue(token.expiration_time == expiry)
         token.expire()
         self.assertTrue(token.expiration_time < expiry)
+
+    def test_validate_expiration_time__not_expired(self):
+        token = RequestToken.objects.create_token(scope="foo")
+        # no exception
+        token.validate_expiration_time()
+
+    def test_validate_expiration_time__expired(self):
+        token = RequestToken.objects.create_token(scope="foo")
+        token.expire()
+        with self.assertRaises(ExpiredSignatureError):
+            token.validate_expiration_time()
 
     def test_parse_xff(self):
 

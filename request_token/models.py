@@ -7,7 +7,7 @@ from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils.timezone import now as tz_now
-from jwt.exceptions import InvalidAudienceError
+from jwt.exceptions import InvalidAudienceError, ExpiredSignatureError
 
 from .exceptions import MaxUseError
 from .settings import JWT_SESSION_TOKEN_EXPIRY, LOG_TOKEN_ERRORS
@@ -326,6 +326,11 @@ class RequestToken(models.Model):
         """Mark the token as expired immediately, effectively killing the token."""
         self.expiration_time = tz_now() - datetime.timedelta(microseconds=1)
         self.save()
+
+    def validate_expiration_time(self):
+        """Explicitly check if token is already expired"""
+        if self.expiration_time and self.expiration_time < tz_now():
+            raise ExpiredSignatureError()
 
 
 def parse_xff(header_value):
