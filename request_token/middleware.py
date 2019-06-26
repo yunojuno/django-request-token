@@ -70,7 +70,10 @@ class RequestTokenMiddleware:
         # no longer exists, may not invalidate the request itself.
         try:
             payload = decode(token)
-            request.token = RequestToken.objects.get(id=payload['jti'])
+            token = RequestToken.objects.get(id=payload['jti'])
+            # Check the case when `token` was expired programmatically by `token.expire()`
+            token.validate_expiration_time()
+            request.token = token
         except RequestToken.DoesNotExist:
             request.token = None
             logger.exception("RequestToken no longer exists: %s", payload['jti'])

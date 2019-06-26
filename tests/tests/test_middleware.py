@@ -105,6 +105,16 @@ class MiddlewareTests(TestCase):
         self.assertEqual(mock_logger.exception.call_count, 1)
 
     @mock.patch('request_token.middleware.logger')
+    def test_process_request_token_expired(self, mock_logger):
+        # expect a `ExpiredSignatureError` if token was expired by `token.expire()`
+        # (it's the same behavior as if JWT itself had an expired signature)
+        self.token.expire()
+        request = self.get_request()
+        self.middleware(request)
+        self.assertIsNone(request.token)
+        self.assertEqual(mock_logger.exception.call_count, 1)
+
+    @mock.patch('request_token.middleware.logger')
     def test_process_request_token_does_not_exist(self, mock_logger):
         request = self.get_request()
         self.token.delete()

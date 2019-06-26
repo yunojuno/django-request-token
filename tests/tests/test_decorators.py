@@ -1,7 +1,6 @@
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse, HttpRequest
 from django.test import TestCase, RequestFactory
-from jwt.exceptions import ExpiredSignatureError
 
 from request_token.decorators import use_request_token, _get_request_arg
 from request_token.exceptions import ScopeError, TokenNotFoundError
@@ -76,13 +75,6 @@ class DecoratorTests(TestCase):
         response = test_view_func(request)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(RequestTokenLog.objects.exists())
-
-    def test_validate_expiration_explicitly(self):
-        token = RequestToken.objects.create_token(scope="foobar")
-        token.expire()
-
-        request = self._request('/', token.jwt(), AnonymousUser())
-        self.assertRaises(ExpiredSignatureError, test_view_func, request)
 
     def test_class_based_view(self):
         """Test that CBV methods extract the request correctly."""
