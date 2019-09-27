@@ -45,6 +45,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
         'user__last_name',
         'user__email',
         'user__username',
+        'scope'
     )
     raw_id_fields = ('user',)
 
