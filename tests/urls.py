@@ -5,10 +5,10 @@ except ImportError:
 
 from .views import decorated, undecorated, roundtrip
 
-app_name = 'tests'
+app_name = "tests"
 
 urlpatterns = [
-    re_path(r'^decorated/$', decorated, name="decorated"),
-    re_path(r'^roundtrip/$', roundtrip, name="roundtrip"),
-    re_path(r'^undecorated/$', undecorated, name="undecorated"),
+    re_path(r"^decorated/$", decorated, name="decorated"),
+    re_path(r"^roundtrip/$", roundtrip, name="roundtrip"),
+    re_path(r"^undecorated/$", undecorated, name="undecorated"),
 ]

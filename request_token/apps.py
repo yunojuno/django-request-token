@@ -9,7 +9,7 @@ class RequestTokenAppConfig(AppConfig):
 
     """AppConfig for request_token app."""
 
-    name = 'request_token'
+    name = "request_token"
     verbose_name = "JWT Request Tokens"
     configs = []
 
@@ -25,4 +25,6 @@ def check_template(template):
     try:
         loader.get_template(template)
     except TemplateDoesNotExist:
-        raise ImproperlyConfigured(f"Custom request token template does not exist: '{template}'")
+        raise ImproperlyConfigured(
+            f"Custom request token template does not exist: '{template}'"
+        )

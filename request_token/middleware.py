@@ -43,19 +43,19 @@ class RequestTokenMiddleware:
         use the token user.
 
         """
-        assert hasattr(request, 'session'), (
+        assert hasattr(request, "session"), (
             "Request has no session attribute, please ensure that Django "
             "session middleware is installed."
         )
-        assert hasattr(request, 'user'), (
+        assert hasattr(request, "user"), (
             "Request has no user attribute, please ensure that Django "
             "authentication middleware is installed."
         )
 
-        if request.method == 'GET' or request.method == 'POST':
+        if request.method == "GET" or request.method == "POST":
             token = request.GET.get(JWT_QUERYSTRING_ARG)
-            if not token and request.method == 'POST':
-                if request.META.get('CONTENT_TYPE') == 'application/json':
+            if not token and request.method == "POST":
+                if request.META.get("CONTENT_TYPE") == "application/json":
                     token = json.loads(request.body).get(JWT_QUERYSTRING_ARG)
                 if not token:
                     token = request.POST.get(JWT_QUERYSTRING_ARG)
@@ -70,10 +70,10 @@ class RequestTokenMiddleware:
         # no longer exists, may not invalidate the request itself.
         try:
             payload = decode(token)
-            request.token = RequestToken.objects.get(id=payload['jti'])
+            request.token = RequestToken.objects.get(id=payload["jti"])
         except RequestToken.DoesNotExist:
             request.token = None
-            logger.exception("RequestToken no longer exists: %s", payload['jti'])
+            logger.exception("RequestToken no longer exists: %s", payload["jti"])
         except InvalidTokenError:
             request.token = None
             logger.exception("RequestToken cannot be decoded: %s", token)
@@ -85,7 +85,7 @@ class RequestTokenMiddleware:
         if isinstance(exception, InvalidTokenError):
             logger.exception("JWT request token error")
             response = _403(request, exception)
-            if getattr(request, 'token', None):
+            if getattr(request, "token", None):
                 request.token.log(request, response, error=exception)
             return response
 
@@ -95,11 +95,8 @@ def _403(request, exception):
     if FOUR03_TEMPLATE:
         html = loader.render_to_string(
             template_name=FOUR03_TEMPLATE,
-            context={
-                'token_error': str(exception),
-                'exception': exception
-            },
-            request=request
+            context={"token_error": str(exception), "exception": exception},
+            request=request,
         )
         return HttpResponseForbidden(html, reason=str(exception))
     return HttpResponseForbidden(reason=str(exception))

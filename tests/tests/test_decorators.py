@@ -17,7 +17,6 @@ def test_view_func(request):
 
 
 class TestClassBasedView(object):
-
     @use_request_token(scope="foobar")
     def test_response(self, request):
         """Return decorated request / response objects."""
@@ -51,10 +50,10 @@ class DecoratorTests(TestCase):
         return request
 
     def test_no_token(self):
-        request = self._request('/', None, AnonymousUser())
+        request = self._request("/", None, AnonymousUser())
         response = test_view_func(request)
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(hasattr(request, 'token'))
+        self.assertFalse(hasattr(request, "token"))
         self.assertFalse(RequestTokenLog.objects.exists())
 
         # now force a TokenNotFoundError, by requiring it in the decorator
@@ -66,12 +65,12 @@ class DecoratorTests(TestCase):
 
     def test_scope(self):
         token = RequestToken.objects.create_token(scope="foobar")
-        request = self._request('/', token.jwt(), AnonymousUser())
+        request = self._request("/", token.jwt(), AnonymousUser())
         self.assertRaises(ScopeError, test_view_func, request)
         self.assertFalse(RequestTokenLog.objects.exists())
 
         RequestToken.objects.all().update(scope="foo")
-        request = self._request('/', token.jwt(), AnonymousUser())
+        request = self._request("/", token.jwt(), AnonymousUser())
         response = test_view_func(request)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(RequestTokenLog.objects.exists())
@@ -80,7 +79,7 @@ class DecoratorTests(TestCase):
         """Test that CBV methods extract the request correctly."""
         cbv = TestClassBasedView()
         token = RequestToken.objects.create_token(scope="foobar")
-        request = self._request('/', token.jwt(), AnonymousUser())
+        request = self._request("/", token.jwt(), AnonymousUser())
         response = cbv.test_response(request)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(int(response.content), token.id)

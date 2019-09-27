@@ -58,58 +58,62 @@ class RequestToken(models.Model):
     """
 
     # do not login the user on the request
-    LOGIN_MODE_NONE = 'None'
+    LOGIN_MODE_NONE = "None"
     # login the user, but only for the original request
-    LOGIN_MODE_REQUEST = 'Request'
+    LOGIN_MODE_REQUEST = "Request"
     # login the user fully, but only for single-use short-duration links
-    LOGIN_MODE_SESSION = 'Session'
+    LOGIN_MODE_SESSION = "Session"
 
     LOGIN_MODE_CHOICES = (
-        (LOGIN_MODE_NONE, 'Do not authenticate'),
-        (LOGIN_MODE_REQUEST, 'Authenticate a single request'),
-        (LOGIN_MODE_SESSION, 'Authenticate for the entire session'),
+        (LOGIN_MODE_NONE, "Do not authenticate"),
+        (LOGIN_MODE_REQUEST, "Authenticate a single request"),
+        (LOGIN_MODE_SESSION, "Authenticate for the entire session"),
     )
     login_mode = models.CharField(
         max_length=10,
         default=LOGIN_MODE_NONE,
         choices=LOGIN_MODE_CHOICES,
-        help_text="How should the request be authenticated?"
+        help_text="How should the request be authenticated?",
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name="request_tokens",
-        blank=True, null=True,
+        blank=True,
+        null=True,
         on_delete=models.CASCADE,
-        help_text="Intended recipient of the JWT (can be used by anyone if not set)."
+        help_text="Intended recipient of the JWT (can be used by anyone if not set).",
     )
     scope = models.CharField(
         max_length=100,
-        help_text="Label used to match request to view function in decorator."
+        help_text="Label used to match request to view function in decorator.",
     )
     expiration_time = models.DateTimeField(
-        blank=True, null=True,
-        help_text="Token will expire at this time (raises ExpiredSignatureError)."
+        blank=True,
+        null=True,
+        help_text="Token will expire at this time (raises ExpiredSignatureError).",
     )
     not_before_time = models.DateTimeField(
-        blank=True, null=True,
-        help_text="Token cannot be used before this time (raises ImmatureSignatureError)."
+        blank=True,
+        null=True,
+        help_text="Token cannot be used before this time (raises ImmatureSignatureError).",
     )
     data = JSONField(
         help_text="Custom data add to the token, but not encoded (must be fetched from DB).",
-        blank=True, null=True,
-        default=dict
+        blank=True,
+        null=True,
+        default=dict,
     )
     issued_at = models.DateTimeField(
-        blank=True, null=True,
-        help_text="Time the token was created (set in the initial save)."
+        blank=True,
+        null=True,
+        help_text="Time the token was created (set in the initial save).",
     )
     max_uses = models.IntegerField(
-        default=1,
-        help_text="The maximum number of times the token can be used."
+        default=1, help_text="The maximum number of times the token can be used."
     )
     used_to_date = models.IntegerField(
         default=0,
-        help_text="Number of times the token has been used to date (raises MaxUseError)."
+        help_text="Number of times the token has been used to date (raises MaxUseError).",
     )
 
     objects = RequestTokenQuerySet.as_manager()
@@ -122,62 +126,65 @@ class RequestToken(models.Model):
         return "Request token #%s" % (self.id)
 
     def __repr__(self):
-        return '<RequestToken id=%s scope=%s login_mode=\'%s\'>' % (
-            self.id, self.scope, self.login_mode)
+        return "<RequestToken id=%s scope=%s login_mode='%s'>" % (
+            self.id,
+            self.scope,
+            self.login_mode,
+        )
 
     @property
     def aud(self):
         """The 'aud' claim, maps to user.id."""
-        return self.claims.get('aud')
+        return self.claims.get("aud")
 
     @property
     def exp(self):
         """The 'exp' claim, maps to expiration_time."""
-        return self.claims.get('exp')
+        return self.claims.get("exp")
 
     @property
     def nbf(self):
         """The 'nbf' claim, maps to not_before_time."""
-        return self.claims.get('nbf')
+        return self.claims.get("nbf")
 
     @property
     def iat(self):
         """The 'iat' claim, maps to issued_at."""
-        return self.claims.get('iat')
+        return self.claims.get("iat")
 
     @property
     def jti(self):
         """The 'jti' claim, maps to id."""
-        return self.claims.get('jti')
+        return self.claims.get("jti")
 
     @property
     def max(self):
         """The 'max' claim, maps to max_uses."""
-        return self.claims.get('max')
+        return self.claims.get("max")
 
     @property
     def sub(self):
         """The 'sub' claim, maps to scope."""
-        return self.claims.get('sub')
+        return self.claims.get("sub")
 
     @property
     def claims(self):
         """A dict containing all of the DEFAULT_CLAIMS (where values exist)."""
         claims = {
-            'max': self.max_uses,
-            'sub': self.scope,
-            'mod': self.login_mode[:1].lower()
+            "max": self.max_uses,
+            "sub": self.scope,
+            "mod": self.login_mode[:1].lower(),
         }
         if self.id is not None:
-            claims['jti'] = self.id
+            claims["jti"] = self.id
         if self.user is not None:
-            claims['aud'] = self.user.id
+            claims["aud"] = self.user.id
         if self.expiration_time is not None:
-            claims['exp'] = to_seconds(self.expiration_time)
+            claims["exp"] = to_seconds(self.expiration_time)
         if self.issued_at is not None:
-            claims['iat'] = to_seconds(self.issued_at)
+            claims["iat"] = to_seconds(self.issued_at)
         if self.not_before_time is not None:
-            claims['nbf'] = to_seconds(self.not_before_time)
+            claims["nbf"] = to_seconds(self.not_before_time)
         return claims
 
     def clean(self):
@@ -186,30 +193,28 @@ class RequestToken(models.Model):
             pass
         if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
             if self.user is None:
-                raise ValidationError(
-                    {'user': 'Session token must have a user.'}
-                )
+                raise ValidationError({"user": "Session token must have a user."})
             if self.max_uses != 1:
                 raise ValidationError(
-                    {'max_uses': 'Session token must have max_use of 1.'}
+                    {"max_uses": "Session token must have max_use of 1."}
                 )
             if self.expiration_time is None:
                 raise ValidationError(
-                    {'expiration_time': 'Session token must have an expiration_time.'}
+                    {"expiration_time": "Session token must have an expiration_time."}
                 )
         if self.login_mode == RequestToken.LOGIN_MODE_REQUEST:
             if self.user is None:
                 raise ValidationError(
-                    {'expiration_time': 'Request token must have a user.'}
+                    {"expiration_time": "Request token must have a user."}
                 )
 
     def save(self, *args, **kwargs):
-        if 'update_fields' not in kwargs:
+        if "update_fields" not in kwargs:
             self.issued_at = self.issued_at or tz_now()
             if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
                 self.expiration_time = self.expiration_time or (
-                    self.issued_at +
-                    datetime.timedelta(minutes=JWT_SESSION_TOKEN_EXPIRY)
+                    self.issued_at
+                    + datetime.timedelta(minutes=JWT_SESSION_TOKEN_EXPIRY)
                 )
         self.clean()
         super(RequestToken, self).save(*args, **kwargs)
@@ -226,34 +231,30 @@ class RequestToken(models.Model):
 
         """
         if self.used_to_date >= self.max_uses:
-            raise MaxUseError(
-                'RequestToken [%s] has exceeded max uses' % self.id
-            )
+            raise MaxUseError("RequestToken [%s] has exceeded max uses" % self.id)
 
     def _auth_is_anonymous(self, request):
         """Authenticate anonymous requests."""
         if request.user.is_authenticated:
-            raise InvalidAudienceError('Token requires anonymous user.')
+            raise InvalidAudienceError("Token requires anonymous user.")
 
         if self.login_mode == RequestToken.LOGIN_MODE_NONE:
             pass
 
         if self.login_mode == RequestToken.LOGIN_MODE_REQUEST:
             logger.debug(
-                'Setting request.user to %r from token %i.',
-                self.user, self.id
+                "Setting request.user to %r from token %i.", self.user, self.id
             )
             request.user = self.user
 
         if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
             logger.debug(
-                'Authenticating request.user as %r from token %i.',
-                self.user, self.id
+                "Authenticating request.user as %r from token %i.", self.user, self.id
             )
             # I _think_ we can get away with this as we are pulling the
             # user out of the DB, and we are explicitly authenticating
             # the user.
-            self.user.backend = 'django.contrib.auth.backends.ModelBackend'
+            self.user.backend = "django.contrib.auth.backends.ModelBackend"
             login(request, self.user)
 
         return request
@@ -261,7 +262,7 @@ class RequestToken(models.Model):
     def _auth_is_authenticated(self, request):
         """Authenticate requests with existing users."""
         if request.user.is_anonymous:
-            raise InvalidAudienceError('Token requires authenticated user.')
+            raise InvalidAudienceError("Token requires authenticated user.")
 
         if self.login_mode == RequestToken.LOGIN_MODE_NONE:
             return request
@@ -270,8 +271,8 @@ class RequestToken(models.Model):
             return request
 
         raise InvalidAudienceError(
-            "RequestToken [%i] audience mismatch: '%s' != '%s'" %
-            (self.id, request.user, self.user)
+            "RequestToken [%i] audience mismatch: '%s' != '%s'"
+            % (self.id, request.user, self.user)
         )
 
     def authenticate(self, request):
@@ -303,15 +304,17 @@ class RequestToken(models.Model):
         Returns a RequestTokenUse object.
 
         """
+
         def rmg(key, default=None):
             return request.META.get(key, default)
 
         log = RequestTokenLog(
             token=self,
             user=None if request.user.is_anonymous else request.user,
-            user_agent=rmg('HTTP_USER_AGENT', 'unknown'),
-            client_ip=parse_xff(rmg('HTTP_X_FORWARDED_FOR')) or rmg('REMOTE_ADDR', None),
-            status_code=response.status_code
+            user_agent=rmg("HTTP_USER_AGENT", "unknown"),
+            client_ip=parse_xff(rmg("HTTP_X_FORWARDED_FOR"))
+            or rmg("REMOTE_ADDR", None),
+            status_code=response.status_code,
         ).save()
         if error and LOG_TOKEN_ERRORS:
             RequestTokenErrorLog.objects.create_error_log(log, error)
@@ -342,7 +345,7 @@ def parse_xff(header_value):
 
     """
     try:
-        return header_value.split(',')[0].strip()
+        return header_value.split(",")[0].strip()
     except (KeyError, AttributeError):
         return None
 
@@ -353,34 +356,34 @@ class RequestTokenLog(models.Model):
 
     token = models.ForeignKey(
         RequestToken,
-        related_name='logs',
+        related_name="logs",
         help_text="The RequestToken that was used.",
         on_delete=models.CASCADE,
-        db_index=True
+        db_index=True,
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        blank=True, null=True,
+        blank=True,
+        null=True,
         on_delete=models.CASCADE,
-        help_text="The user who made the request (None if anonymous)."
+        help_text="The user who made the request (None if anonymous).",
     )
     user_agent = models.TextField(
-        blank=True,
-        help_text="User-agent of client used to make the request."
+        blank=True, help_text="User-agent of client used to make the request."
     )
     client_ip = models.GenericIPAddressField(
         blank=True,
         null=True,
         unpack_ipv4=True,
-        help_text="Client IP of device used to make the request."
+        help_text="Client IP of device used to make the request.",
     )
     status_code = models.IntegerField(
-        blank=True, null=True,
-        help_text="Response status code associated with this use of the token."
+        blank=True,
+        null=True,
+        help_text="Response status code associated with this use of the token.",
     )
     timestamp = models.DateTimeField(
-        blank=True,
-        help_text="Time the request was logged."
+        blank=True, help_text="Time the request was logged."
     )
 
     class Meta:
@@ -394,24 +397,26 @@ class RequestTokenLog(models.Model):
             return "%s used by %s at %s" % (self.token, self.user, self.timestamp)
 
     def __repr__(self):
-        return '<RequestTokenLog id=%s token=%s timestamp=\'%s\'>' % (
-            self.id, self.token.id, self.timestamp)
+        return "<RequestTokenLog id=%s token=%s timestamp='%s'>" % (
+            self.id,
+            self.token.id,
+            self.timestamp,
+        )
 
     def save(self, *args, **kwargs):
-        if 'update_fields' not in kwargs:
+        if "update_fields" not in kwargs:
             self.timestamp = self.timestamp or tz_now()
         super(RequestTokenLog, self).save(*args, **kwargs)
         return self
 
 
 class RequestTokenErrorLogQuerySet(models.query.QuerySet):
-
     def create_error_log(self, log, error):
         return RequestTokenErrorLog(
             token=log.token,
             log=log,
             error_type=type(error).__name__,
-            error_message=str(error)
+            error_message=str(error),
         )
 
 
@@ -421,25 +426,23 @@ class RequestTokenErrorLog(models.Model):
 
     token = models.ForeignKey(
         RequestToken,
-        related_name='errors',
+        related_name="errors",
         on_delete=models.CASCADE,
         help_text="The RequestToken that was used.",
-        db_index=True
+        db_index=True,
     )
     log = models.OneToOneField(
         RequestTokenLog,
-        related_name='error',
+        related_name="error",
         on_delete=models.CASCADE,
         help_text="The token use against which the error occurred.",
-        db_index=True
+        db_index=True,
     )
     error_type = models.CharField(
-        max_length=50,
-        help_text="The underlying type of error raised."
+        max_length=50, help_text="The underlying type of error raised."
     )
     error_message = models.CharField(
-        max_length=200,
-        help_text="The error message supplied."
+        max_length=200, help_text="The error message supplied."
     )
 
     objects = RequestTokenErrorLogQuerySet().as_manager()

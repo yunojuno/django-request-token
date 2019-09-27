@@ -8,14 +8,19 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('request_token', '0009_requesttokenerror'),
-    ]
+    dependencies = [("request_token", "0009_requesttokenerror")]
 
     operations = [
         migrations.AlterField(
-            model_name='requesttoken',
-            name='user',
-            field=models.ForeignKey(blank=True, help_text='Intended recipient of the JWT (can be used by anyone if not set).', null=True, on_delete=models.deletion.CASCADE, related_name='request_tokens', to=settings.AUTH_USER_MODEL),
-        ),
+            model_name="requesttoken",
+            name="user",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="Intended recipient of the JWT (can be used by anyone if not set).",
+                null=True,
+                on_delete=models.deletion.CASCADE,
+                related_name="request_tokens",
+                to=settings.AUTH_USER_MODEL,
+            ),
+        )
     ]
