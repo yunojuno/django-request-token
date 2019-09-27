@@ -11,7 +11,7 @@ from jwt.exceptions import InvalidAudienceError
 
 from .exceptions import MaxUseError
 from .settings import JWT_SESSION_TOKEN_EXPIRY, LOG_TOKEN_ERRORS
-from .utils import to_seconds, encode
+from .utils import encode, to_seconds
 
 logger = logging.getLogger(__name__)
 

@@ -1,12 +1,12 @@
-import logging
 import json
+import logging
 
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
 from django.template import loader
 from jwt.exceptions import InvalidTokenError
 
 from .models import RequestToken
-from .settings import JWT_QUERYSTRING_ARG, FOUR03_TEMPLATE
+from .settings import FOUR03_TEMPLATE, JWT_QUERYSTRING_ARG
 from .utils import decode
 
 logger = logging.getLogger(__name__)

@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 from django.core.exceptions import ImproperlyConfigured
-from django.template import loader, TemplateDoesNotExist
+from django.template import TemplateDoesNotExist, loader
 
 from .settings import FOUR03_TEMPLATE
 

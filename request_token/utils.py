@@ -1,11 +1,10 @@
 """Basic encode/decode utils, taken from PyJWT."""
 import calendar
 
-from jwt import encode as jwt_encode
-from jwt import decode as jwt_decode
-from jwt import exceptions
-
 from django.conf import settings
+from jwt import decode as jwt_decode
+from jwt import encode as jwt_encode
+from jwt import exceptions
 
 # verification options - signature and expiry date
 DEFAULT_DECODE_OPTIONS = {

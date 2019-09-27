@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.utils.safestring import mark_safe
 from django.utils.timezone import now as tz_now
 
-from .models import RequestToken, RequestTokenLog, RequestTokenErrorLog
+from .models import RequestToken, RequestTokenErrorLog, RequestTokenLog
 
 
 def pretty_print(data):

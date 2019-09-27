@@ -3,7 +3,7 @@ try:
 except ImportError:
     from django.conf.urls import url as re_path
 
-from .views import decorated, undecorated, roundtrip
+from .views import decorated, roundtrip, undecorated
 
 app_name = "tests"
 
