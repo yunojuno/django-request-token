@@ -13,7 +13,7 @@ setup(
     version=request_token.__version__,
     packages=find_packages(exclude=('tests',)),
     install_requires=[
-        'Django>=1.11',
+        'Django>=2.0',
         'PyJWT>=1.4',
         'sqlparse>=0.2',
         'psycopg2-binary>=2.7'
@@ -30,9 +30,9 @@ setup(
     classifiers=[
         'Environment :: Web Environment',
         'Framework :: Django',
-        'Framework :: Django :: 1.11',
         'Framework :: Django :: 2.0',
         'Framework :: Django :: 2.1',
+        'Framework :: Django :: 2.2',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
