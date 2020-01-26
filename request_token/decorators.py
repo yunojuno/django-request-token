@@ -20,7 +20,9 @@ def _get_request_arg(*args: Any) -> Optional[HttpRequest]:
 
 
 def use_request_token(
-    view_func: Callable, scope: Optional[str] = None, required: bool = False
+    view_func: Optional[Callable] = None,
+    scope: Optional[str] = None,
+    required: bool = False,
 ) -> Callable:
     """
     Decorate view functions that supports RequestTokens.
@@ -47,6 +49,9 @@ def use_request_token(
     """
     if not scope:
         raise ValueError("Decorator scope cannot be empty.")
+
+    if view_func is None:
+        return functools.partial(use_request_token, scope=scope, required=required)
 
     @functools.wraps(view_func)
     def inner(*args: Any, **kwargs: Any) -> HttpResponse:

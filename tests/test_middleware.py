@@ -3,6 +3,7 @@ from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
+from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpResponse
 from django.test import RequestFactory, TestCase
 from jwt import exceptions
@@ -51,10 +52,10 @@ class MiddlewareTests(TestCase):
 
     def test_process_request_assertions(self):
         request = self.factory.get("/")
-        self.assertRaises(AssertionError, self.middleware, request)
+        self.assertRaises(ImproperlyConfigured, self.middleware, request)
 
         request.user = AnonymousUser()
-        self.assertRaises(AssertionError, self.middleware, request)
+        self.assertRaises(ImproperlyConfigured, self.middleware, request)
         request.session = MockSession()
 
         self.middleware(request)

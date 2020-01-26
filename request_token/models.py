@@ -143,29 +143,29 @@ class RequestToken(models.Model):
         )
 
     @property
-    def aud(self) -> int:
+    def aud(self) -> Optional[int]:
         """Return 'aud' claim, mapped to user.id."""
-        return self.claims["aud"]
+        return self.claims.get("aud")
 
     @property
-    def exp(self) -> datetime.datetime:
+    def exp(self) -> Optional[datetime.datetime]:
         """Return 'exp' claim, mapped to expiration_time."""
-        return self.claims["exp"]
+        return self.claims.get("exp")
 
     @property
-    def nbf(self) -> datetime.datetime:
+    def nbf(self) -> Optional[datetime.datetime]:
         """Return the 'nbf' claim, mapped to not_before_time."""
-        return self.claims["nbf"]
+        return self.claims.get("nbf")
 
     @property
-    def iat(self) -> datetime.datetime:
+    def iat(self) -> Optional[datetime.datetime]:
         """Return the 'iat' claim, mapped to issued_at."""
-        return self.claims["iat"]
+        return self.claims.get("iat")
 
     @property
-    def jti(self) -> int:
+    def jti(self) -> Optional[int]:
         """Return the 'jti' claim, mapped to id."""
-        return self.claims["jti"]
+        return self.claims.get("jti")
 
     @property
     def max(self) -> int:

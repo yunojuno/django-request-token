@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import calendar
 import datetime
-from typing import Dict, Optional, Sequence
+from typing import Dict, List, Optional, Sequence
 
 from django.conf import settings
 from jwt import decode as jwt_decode
@@ -42,12 +42,16 @@ def encode(payload: dict, check_claims: Sequence[str] = MANDATORY_CLAIMS) -> byt
 
 
 def decode(
-    token: str,
+    token: bytes,
     options: Dict[str, bool] = DEFAULT_DECODE_OPTIONS,
     check_claims: Sequence[str] = MANDATORY_CLAIMS,
+    algorithms: Optional[List[str]] = None
 ) -> dict:
     """Decode JWT payload and check for 'jti', 'sub' claims."""
-    decoded = jwt_decode(token, settings.SECRET_KEY, options=options)
+    if not algorithms:
+        # default encode algorithm - see PyJWT.encode
+        algorithms = ["HS256"]
+    decoded = jwt_decode(token, settings.SECRET_KEY, algorithms=algorithms, options=options)
     check_mandatory_claims(decoded, claims=check_claims)
     return decoded
 

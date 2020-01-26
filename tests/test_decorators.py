@@ -17,14 +17,13 @@ def test_view_func(request):
 
 class TestClassBasedView(object):
     @use_request_token(scope="foobar")
-    def test_response(self, request):
+    def get(self, request):
         """Return decorated request / response objects."""
         response = HttpResponse(str(request.token.id), status=200)
         return response
 
 
 class MockSession(object):
-
     """Fake Session model used to support `session_key` property."""
 
     @property
@@ -33,7 +32,6 @@ class MockSession(object):
 
 
 class DecoratorTests(TestCase):
-
     """use_jwt decorator tests."""
 
     def setUp(self):
@@ -79,7 +77,7 @@ class DecoratorTests(TestCase):
         cbv = TestClassBasedView()
         token = RequestToken.objects.create_token(scope="foobar")
         request = self._request("/", token.jwt(), AnonymousUser())
-        response = cbv.test_response(request)
+        response = cbv.get(request)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(int(response.content), token.id)
         self.assertTrue(RequestTokenLog.objects.exists())
