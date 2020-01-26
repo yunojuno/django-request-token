@@ -7,21 +7,19 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('request_token', '0010_auto_20170521_1944'),
-    ]
+    dependencies = [("request_token", "0010_auto_20170521_1944")]
 
     operations = [
         migrations.AlterModelOptions(
-            name='requesttoken',
-            options={'verbose_name': 'Token', 'verbose_name_plural': 'Tokens'},
+            name="requesttoken",
+            options={"verbose_name": "Token", "verbose_name_plural": "Tokens"},
         ),
         migrations.AlterModelOptions(
-            name='requesttokenerrorlog',
-            options={'verbose_name': 'Error', 'verbose_name_plural': 'Errors'},
+            name="requesttokenerrorlog",
+            options={"verbose_name": "Error", "verbose_name_plural": "Errors"},
         ),
         migrations.AlterModelOptions(
-            name='requesttokenlog',
-            options={'verbose_name': 'Log', 'verbose_name_plural': 'Logs'},
+            name="requesttokenlog",
+            options={"verbose_name": "Log", "verbose_name_plural": "Logs"},
         ),
     ]

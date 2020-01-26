@@ -1,26 +1,25 @@
 """Basic encode/decode utils, taken from PyJWT."""
 import calendar
 
-from jwt import encode as jwt_encode
-from jwt import decode as jwt_decode
-from jwt import exceptions
-
 from django.conf import settings
+from jwt import decode as jwt_decode
+from jwt import encode as jwt_encode
+from jwt import exceptions
 
 # verification options - signature and expiry date
 DEFAULT_DECODE_OPTIONS = {
-    'verify_signature': True,
-    'verify_exp': True,
-    'verify_nbf': True,
-    'verify_iat': True,
-    'verify_aud': False,
-    'verify_iss': False,  # we're only validating our own claims
-    'require_exp': False,
-    'require_iat': False,
-    'require_nbf': False
+    "verify_signature": True,
+    "verify_exp": True,
+    "verify_nbf": True,
+    "verify_iat": True,
+    "verify_aud": False,
+    "verify_iss": False,  # we're only validating our own claims
+    "require_exp": False,
+    "require_iat": False,
+    "require_nbf": False,
 }
 
-MANDATORY_CLAIMS = ('jti', 'sub', 'mod')
+MANDATORY_CLAIMS = ("jti", "sub", "mod")
 
 
 def check_mandatory_claims(payload, claims=MANDATORY_CLAIMS):

@@ -19,8 +19,8 @@ def decorated(request):
 
 @use_request_token(scope="bar")
 def roundtrip(request):
-    if request.method == 'GET':
-        return render(request, 'test_form.html')
+    if request.method == "GET":
+        return render(request, "test_form.html")
     else:
         request.token.expire()
-        return HttpResponse('OK', status=201)
+        return HttpResponse("OK", status=201)

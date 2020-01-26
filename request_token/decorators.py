@@ -50,7 +50,7 @@ def use_request_token(view_func=None, scope=None, required=False):
         # with functions and methods we need to determine where the request
         # arg is.
         request = _get_request_arg(*args)
-        token = getattr(request, 'token', None)
+        token = getattr(request, "token", None)
         if token is None:
             if required is True:
                 raise TokenNotFoundError()
@@ -69,8 +69,7 @@ def use_request_token(view_func=None, scope=None, required=False):
                 return response
             else:
                 raise ScopeError(
-                    "RequestToken scope mismatch: '%s' != '%s'" %
-                    (token.scope, scope)
+                    "RequestToken scope mismatch: '%s' != '%s'" % (token.scope, scope)
                 )
 
     return inner
