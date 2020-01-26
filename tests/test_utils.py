@@ -46,9 +46,4 @@ class FunctionTests(TestCase):
         # check that we can't decode with the wrong algorithms
         payload = {"foo": "bar"}
         encoded = jwt_encode(payload, settings.SECRET_KEY)
-        self.assertRaises(
-            InvalidAlgorithmError,
-            decode,
-            encoded,
-            algorithms=["HS384"]
-        )
+        self.assertRaises(InvalidAlgorithmError, decode, encoded, algorithms=["HS384"])
