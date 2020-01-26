@@ -1,6 +1,5 @@
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render
-
 from request_token.decorators import use_request_token
 
 

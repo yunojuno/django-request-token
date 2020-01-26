@@ -4,6 +4,11 @@
 .. image:: https://travis-ci.org/yunojuno/django-request-token.svg
     :target: https://travis-ci.org/yunojuno/django-request-token
 
+Supported versions
+------------------
+
+As of v0.10 this project supports Django 2.2 and above, and Python 3.7/3.8 only on the master branch. For previous verions see the relevant tag / branch.
+
 Django Request Token
 --------------------
 

@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import json
+from typing import Optional
 
 from django.contrib import admin
 from django.utils.safestring import mark_safe
@@ -7,7 +10,7 @@ from django.utils.timezone import now as tz_now
 from .models import RequestToken, RequestTokenErrorLog, RequestTokenLog
 
 
-def pretty_print(data):
+def pretty_print(data: Optional[dict]) -> Optional[str]:
     """Convert dict into formatted HTML."""
     if data is None:
         return None
@@ -17,7 +20,6 @@ def pretty_print(data):
 
 
 class RequestTokenAdmin(admin.ModelAdmin):
-
     """Admin model for RequestToken objects."""
 
     list_display = (
@@ -40,25 +42,25 @@ class RequestTokenAdmin(admin.ModelAdmin):
     )
     raw_id_fields = ("user",)
 
-    def _claims(self, obj):
+    def _claims(self, obj: RequestToken) -> Optional[str]:
         return pretty_print(obj.claims)
 
-    _claims.short_description = "JWT (decoded)"
+    _claims.short_description = "JWT (decoded)"  # type: ignore
 
-    def _data(self, obj):
+    def _data(self, obj: RequestToken) -> Optional[str]:
         return pretty_print(obj.data)
 
-    _data.short_description = "Data (JSON)"
+    _data.short_description = "Data (JSON)"  # type: ignore
 
-    def jwt(self, obj):
+    def jwt(self, obj: RequestToken) -> Optional[str]:
         try:
             return obj.jwt()
         except Exception:
             return None
 
-    jwt.short_description = "JWT"
+    jwt.short_description = "JWT"  # type: ignore
 
-    def _parsed(self, obj):
+    def _parsed(self, obj: RequestToken) -> Optional[str]:
         try:
             jwt = obj.jwt().split(".")
             return pretty_print(
@@ -67,9 +69,9 @@ class RequestTokenAdmin(admin.ModelAdmin):
         except Exception:
             return None
 
-    _parsed.short_description = "JWT (parsed)"
+    _parsed.short_description = "JWT (parsed)"  # type: ignore
 
-    def is_valid(self, obj):
+    def is_valid(self, obj: RequestToken) -> bool:
         """Validate the time window and usage."""
         now = tz_now()
         if obj.not_before_time and obj.not_before_time > now:
@@ -80,11 +82,10 @@ class RequestTokenAdmin(admin.ModelAdmin):
             return False
         return True
 
-    is_valid.boolean = True
+    is_valid.boolean = True  # type: ignore
 
 
 class RequestTokenLogAdmin(admin.ModelAdmin):
-
     """Admin model for RequestTokenLog objects."""
 
     list_display = ("token", "user", "status_code", "timestamp")
@@ -94,7 +95,6 @@ class RequestTokenLogAdmin(admin.ModelAdmin):
 
 
 class RequestTokenErrorLogAdmin(admin.ModelAdmin):
-
     """Admin model for RequestTokenErrorLog objects."""
 
     list_display = ("token", "log", "error_type", "error_message")

@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from django.conf import settings
-from django.db import models, migrations
+from django.db import migrations, models
 
 # gets around "django.db.utils.ProgrammingError: column "client_ip" cannot be cast automatically to type inet"
 ALTER_SQL = (

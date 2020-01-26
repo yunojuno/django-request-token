@@ -1,5 +1,9 @@
 """Basic encode/decode utils, taken from PyJWT."""
+from __future__ import annotations
+
 import calendar
+import datetime
+from typing import Dict, List, Optional, Sequence
 
 from django.conf import settings
 from jwt import decode as jwt_decode
@@ -22,27 +26,39 @@ DEFAULT_DECODE_OPTIONS = {
 MANDATORY_CLAIMS = ("jti", "sub", "mod")
 
 
-def check_mandatory_claims(payload, claims=MANDATORY_CLAIMS):
+def check_mandatory_claims(
+    payload: dict, claims: Sequence[str] = MANDATORY_CLAIMS
+) -> None:
     """Check dict for mandatory claims."""
     for claim in claims:
         if claim not in payload:
             raise exceptions.MissingRequiredClaimError(claim)
 
 
-def encode(payload, check_claims=MANDATORY_CLAIMS):
+def encode(payload: dict, check_claims: Sequence[str] = MANDATORY_CLAIMS) -> bytes:
     """Encode JSON payload (using SECRET_KEY)."""
     check_mandatory_claims(payload, claims=check_claims)
     return jwt_encode(payload, settings.SECRET_KEY)
 
 
-def decode(token, options=DEFAULT_DECODE_OPTIONS, check_claims=MANDATORY_CLAIMS):
+def decode(
+    token: bytes,
+    options: Dict[str, bool] = DEFAULT_DECODE_OPTIONS,
+    check_claims: Sequence[str] = MANDATORY_CLAIMS,
+    algorithms: Optional[List[str]] = None,
+) -> dict:
     """Decode JWT payload and check for 'jti', 'sub' claims."""
-    decoded = jwt_decode(token, settings.SECRET_KEY, options=options)
+    if not algorithms:
+        # default encode algorithm - see PyJWT.encode
+        algorithms = ["HS256"]
+    decoded = jwt_decode(
+        token, settings.SECRET_KEY, algorithms=algorithms, options=options
+    )
     check_mandatory_claims(decoded, claims=check_claims)
     return decoded
 
 
-def to_seconds(timestamp):
+def to_seconds(timestamp: datetime.datetime) -> Optional[int]:
     """Convert timestamp into integers since epoch."""
     try:
         return calendar.timegm(timestamp.utctimetuple())

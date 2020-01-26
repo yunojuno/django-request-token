@@ -1,27 +1,25 @@
 import datetime
 from unittest import mock
 
-from jwt.exceptions import InvalidAudienceError
-
-from django.contrib.sessions.middleware import SessionMiddleware
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.models import AnonymousUser
+from django.contrib.sessions.middleware import SessionMiddleware
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.http import HttpResponse
-from django.test import TestCase, RequestFactory
+from django.test import RequestFactory, TestCase
 from django.utils.timezone import now as tz_now
-
+from jwt.exceptions import InvalidAudienceError
 from request_token.exceptions import MaxUseError
 from request_token.models import (
-    parse_xff,
     RequestToken,
     RequestTokenErrorLog,
     RequestTokenErrorLogQuerySet,
     RequestTokenLog,
+    parse_xff,
 )
 from request_token.settings import JWT_SESSION_TOKEN_EXPIRY
-from request_token.utils import to_seconds, decode
+from request_token.utils import decode, to_seconds
 
 
 class RequestTokenTests(TestCase):

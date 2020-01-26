@@ -1,14 +1,12 @@
 import json
 from unittest import mock
 
-from jwt import exceptions
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
+from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpResponse
-from django.test import TestCase, RequestFactory
-
-
+from django.test import RequestFactory, TestCase
+from jwt import exceptions
 from request_token.middleware import RequestTokenMiddleware
 from request_token.models import RequestToken
 from request_token.settings import JWT_QUERYSTRING_ARG
@@ -54,10 +52,10 @@ class MiddlewareTests(TestCase):
 
     def test_process_request_assertions(self):
         request = self.factory.get("/")
-        self.assertRaises(AssertionError, self.middleware, request)
+        self.assertRaises(ImproperlyConfigured, self.middleware, request)
 
         request.user = AnonymousUser()
-        self.assertRaises(AssertionError, self.middleware, request)
+        self.assertRaises(ImproperlyConfigured, self.middleware, request)
         request.session = MockSession()
 
         self.middleware(request)

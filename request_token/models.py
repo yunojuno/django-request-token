@@ -1,13 +1,18 @@
+from __future__ import annotations
+
 import datetime
 import logging
+from typing import Any, Optional
 
 from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.http import HttpRequest
+from django.http.response import HttpResponse
 from django.utils.timezone import now as tz_now
-from jwt.exceptions import InvalidAudienceError
+from jwt.exceptions import InvalidAudienceError, InvalidTokenError
 
 from .exceptions import MaxUseError
 from .settings import JWT_SESSION_TOKEN_EXPIRY, LOG_TOKEN_ERRORS
@@ -17,17 +22,16 @@ logger = logging.getLogger(__name__)
 
 
 class RequestTokenQuerySet(models.query.QuerySet):
-
     """Custom QuerySet for RquestToken objects."""
 
-    def create_token(self, scope, **kwargs):
+    def create_token(self, scope: str, **kwargs: Any) -> RequestToken:
         """Create a new RequestToken."""
         return RequestToken(scope=scope, **kwargs).save()
 
 
 class RequestToken(models.Model):
-
-    """A link token, targeted for use by a known Django User.
+    """
+    A link token, targeted for use by a known Django User.
 
     A RequestToken contains information that can be encoded as a JWT
     (JSON Web Token). It is designed to be used in conjunction with the
@@ -95,10 +99,14 @@ class RequestToken(models.Model):
     not_before_time = models.DateTimeField(
         blank=True,
         null=True,
-        help_text="Token cannot be used before this time (raises ImmatureSignatureError).",
+        help_text=(
+            "Token cannot be used before this time (raises ImmatureSignatureError)."
+        ),
     )
     data = JSONField(
-        help_text="Custom data add to the token, but not encoded (must be fetched from DB).",
+        help_text=(
+            "Custom data add to the token, but not encoded (must be fetched from DB)."
+        ),
         blank=True,
         null=True,
         default=dict,
@@ -113,7 +121,9 @@ class RequestToken(models.Model):
     )
     used_to_date = models.IntegerField(
         default=0,
-        help_text="Number of times the token has been used to date (raises MaxUseError).",
+        help_text=(
+            "Number of times the token has been used to date (raises MaxUseError)."
+        ),
     )
 
     objects = RequestTokenQuerySet.as_manager()
@@ -122,10 +132,10 @@ class RequestToken(models.Model):
         verbose_name = "Token"
         verbose_name_plural = "Tokens"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "Request token #%s" % (self.id)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<RequestToken id=%s scope=%s login_mode='%s'>" % (
             self.id,
             self.scope,
@@ -133,43 +143,43 @@ class RequestToken(models.Model):
         )
 
     @property
-    def aud(self):
-        """The 'aud' claim, maps to user.id."""
+    def aud(self) -> Optional[int]:
+        """Return 'aud' claim, mapped to user.id."""
         return self.claims.get("aud")
 
     @property
-    def exp(self):
-        """The 'exp' claim, maps to expiration_time."""
+    def exp(self) -> Optional[datetime.datetime]:
+        """Return 'exp' claim, mapped to expiration_time."""
         return self.claims.get("exp")
 
     @property
-    def nbf(self):
-        """The 'nbf' claim, maps to not_before_time."""
+    def nbf(self) -> Optional[datetime.datetime]:
+        """Return the 'nbf' claim, mapped to not_before_time."""
         return self.claims.get("nbf")
 
     @property
-    def iat(self):
-        """The 'iat' claim, maps to issued_at."""
+    def iat(self) -> Optional[datetime.datetime]:
+        """Return the 'iat' claim, mapped to issued_at."""
         return self.claims.get("iat")
 
     @property
-    def jti(self):
-        """The 'jti' claim, maps to id."""
+    def jti(self) -> Optional[int]:
+        """Return the 'jti' claim, mapped to id."""
         return self.claims.get("jti")
 
     @property
-    def max(self):
-        """The 'max' claim, maps to max_uses."""
-        return self.claims.get("max")
+    def max(self) -> int:
+        """Return the 'max' claim, mapped to max_uses."""
+        return self.claims["max"]
 
     @property
-    def sub(self):
-        """The 'sub' claim, maps to scope."""
-        return self.claims.get("sub")
+    def sub(self) -> str:
+        """Return the 'sub' claim, mapped to scope."""
+        return self.claims["sub"]
 
     @property
-    def claims(self):
-        """A dict containing all of the DEFAULT_CLAIMS (where values exist)."""
+    def claims(self) -> dict:
+        """Return dict containing all of the DEFAULT_CLAIMS (where values exist)."""
         claims = {
             "max": self.max_uses,
             "sub": self.scope,
@@ -187,7 +197,7 @@ class RequestToken(models.Model):
             claims["nbf"] = to_seconds(self.not_before_time)
         return claims
 
-    def clean(self):
+    def clean(self) -> None:
         """Ensure that login_mode setting is valid."""
         if self.login_mode == RequestToken.LOGIN_MODE_NONE:
             pass
@@ -208,7 +218,7 @@ class RequestToken(models.Model):
                     {"expiration_time": "Request token must have a user."}
                 )
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> RequestToken:
         if "update_fields" not in kwargs:
             self.issued_at = self.issued_at or tz_now()
             if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
@@ -220,12 +230,13 @@ class RequestToken(models.Model):
         super(RequestToken, self).save(*args, **kwargs)
         return self
 
-    def jwt(self):
+    def jwt(self) -> str:
         """Encode the token claims into a JWT."""
         return encode(self.claims).decode()
 
-    def validate_max_uses(self):
-        """Check the token max_uses is still valid.
+    def validate_max_uses(self) -> None:
+        """
+        Check the token max_uses is still valid.
 
         Raises MaxUseError if invalid.
 
@@ -233,7 +244,7 @@ class RequestToken(models.Model):
         if self.used_to_date >= self.max_uses:
             raise MaxUseError("RequestToken [%s] has exceeded max uses" % self.id)
 
-    def _auth_is_anonymous(self, request):
+    def _auth_is_anonymous(self, request: HttpRequest) -> HttpRequest:
         """Authenticate anonymous requests."""
         if request.user.is_authenticated:
             raise InvalidAudienceError("Token requires anonymous user.")
@@ -259,7 +270,7 @@ class RequestToken(models.Model):
 
         return request
 
-    def _auth_is_authenticated(self, request):
+    def _auth_is_authenticated(self, request: HttpRequest) -> HttpRequest:
         """Authenticate requests with existing users."""
         if request.user.is_anonymous:
             raise InvalidAudienceError("Token requires authenticated user.")
@@ -275,8 +286,9 @@ class RequestToken(models.Model):
             % (self.id, request.user, self.user)
         )
 
-    def authenticate(self, request):
-        """Authenticate an HttpRequest with the token user.
+    def authenticate(self, request: HttpRequest) -> HttpRequest:
+        """
+        Authenticate an HttpRequest with the token user.
 
         This method encapsulates the request handling - if the token
         has a user assigned, then this will be added to the request.
@@ -288,8 +300,14 @@ class RequestToken(models.Model):
             return self._auth_is_authenticated(request)
 
     @transaction.atomic
-    def log(self, request, response, error=None):
-        """Record the use of a token.
+    def log(
+        self,
+        request: HttpRequest,
+        response: HttpResponse,
+        error: Optional[InvalidTokenError] = None,
+    ) -> RequestTokenLog:
+        """
+        Record the use of a token.
 
         This is used by the decorator to log each time someone uses the token,
         or tries to. Used for reporting, diagnostics.
@@ -305,7 +323,7 @@ class RequestToken(models.Model):
 
         """
 
-        def rmg(key, default=None):
+        def rmg(key: str, default: Any = None) -> Any:
             return request.META.get(key, default)
 
         log = RequestTokenLog(
@@ -325,15 +343,15 @@ class RequestToken(models.Model):
         self.save()
         return log
 
-    def expire(self):
+    def expire(self) -> None:
         """Mark the token as expired immediately, effectively killing the token."""
         self.expiration_time = tz_now() - datetime.timedelta(microseconds=1)
         self.save()
 
 
-def parse_xff(header_value):
+def parse_xff(header_value: str) -> Optional[str]:
     """
-    Parses out the X-Forwarded-For request header.
+    Parse out the X-Forwarded-For request header.
 
     This handles the bug that blows up when multiple IP addresses are
     specified in the header. The docs state that the header contains
@@ -351,7 +369,6 @@ def parse_xff(header_value):
 
 
 class RequestTokenLog(models.Model):
-
     """Used to log the use of a RequestToken."""
 
     token = models.ForeignKey(
@@ -390,20 +407,20 @@ class RequestTokenLog(models.Model):
         verbose_name = "Log"
         verbose_name_plural = "Logs"
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.user is None:
             return "%s used %s" % (self.token, self.timestamp)
         else:
             return "%s used by %s at %s" % (self.token, self.user, self.timestamp)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<RequestTokenLog id=%s token=%s timestamp='%s'>" % (
             self.id,
             self.token.id,
             self.timestamp,
         )
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> RequestToken:
         if "update_fields" not in kwargs:
             self.timestamp = self.timestamp or tz_now()
         super(RequestTokenLog, self).save(*args, **kwargs)
@@ -411,7 +428,9 @@ class RequestTokenLog(models.Model):
 
 
 class RequestTokenErrorLogQuerySet(models.query.QuerySet):
-    def create_error_log(self, log, error):
+    def create_error_log(
+        self, log: RequestTokenLog, error: Exception
+    ) -> RequestTokenErrorLog:
         return RequestTokenErrorLog(
             token=log.token,
             log=log,
@@ -421,7 +440,6 @@ class RequestTokenErrorLogQuerySet(models.query.QuerySet):
 
 
 class RequestTokenErrorLog(models.Model):
-
     """Used to log errors that occur with the use of a RequestToken."""
 
     token = models.ForeignKey(
@@ -451,9 +469,9 @@ class RequestTokenErrorLog(models.Model):
         verbose_name = "Error"
         verbose_name_plural = "Errors"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.error_message
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> RequestTokenErrorLog:
         super(RequestTokenErrorLog, self).save(*args, **kwargs)
         return self

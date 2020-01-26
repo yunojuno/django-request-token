@@ -1,6 +1,6 @@
 from unittest import mock
-from django.test import TestCase
 
+from django.test import TestCase
 from request_token.settings import JWT_QUERYSTRING_ARG
 from request_token.templatetags import request_token_tags
 

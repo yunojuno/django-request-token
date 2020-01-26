@@ -1,7 +1,13 @@
+from __future__ import annotations
+
 import json
 import logging
+from typing import Callable
 
-from django.http import HttpResponseForbidden, HttpResponseNotAllowed
+from django.core.exceptions import ImproperlyConfigured
+from django.http import HttpResponseForbidden
+from django.http.request import HttpRequest
+from django.http.response import HttpResponse
 from django.template import loader
 from jwt.exceptions import InvalidTokenError
 
@@ -13,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 
 class RequestTokenMiddleware:
-
     """
     Extract and verify request tokens from incoming GET requests.
 
@@ -22,11 +27,12 @@ class RequestTokenMiddleware:
 
     """
 
-    def __init__(self, get_response):
+    def __init__(self, get_response: Callable):
         self.get_response = get_response
 
-    def __call__(self, request):
-        """Verify JWT request querystring arg.
+    def __call__(self, request: HttpRequest) -> HttpResponse:  # noqa: C901
+        """
+        Verify JWT request querystring arg.
 
         If a token is found (using JWT_QUERYSTRING_ARG), then it is decoded,
         which verifies the signature and expiry dates, and raises a 403 if
@@ -43,14 +49,16 @@ class RequestTokenMiddleware:
         use the token user.
 
         """
-        assert hasattr(request, "session"), (
-            "Request has no session attribute, please ensure that Django "
-            "session middleware is installed."
-        )
-        assert hasattr(request, "user"), (
-            "Request has no user attribute, please ensure that Django "
-            "authentication middleware is installed."
-        )
+        if not hasattr(request, "session"):
+            raise ImproperlyConfigured(
+                "Request has no session attribute, please ensure that Django "
+                "session middleware is installed."
+            )
+        if not hasattr(request, "user"):
+            raise ImproperlyConfigured(
+                "Request has no user attribute, please ensure that Django "
+                "authentication middleware is installed."
+            )
 
         if request.method == "GET" or request.method == "POST":
             token = request.GET.get(JWT_QUERYSTRING_ARG)
@@ -80,7 +88,9 @@ class RequestTokenMiddleware:
 
         return self.get_response(request)
 
-    def process_exception(self, request, exception):
+    def process_exception(
+        self, request: HttpRequest, exception: Exception
+    ) -> HttpResponse:
         """Handle all InvalidTokenErrors."""
         if isinstance(exception, InvalidTokenError):
             logger.exception("JWT request token error")
@@ -90,7 +100,7 @@ class RequestTokenMiddleware:
             return response
 
 
-def _403(request, exception):
+def _403(request: HttpRequest, exception: Exception) -> HttpResponseForbidden:
     """Render HttpResponseForbidden for exception."""
     if FOUR03_TEMPLATE:
         html = loader.render_to_string(
