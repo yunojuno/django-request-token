@@ -1,8 +1,7 @@
 from django.contrib.auth.models import AnonymousUser
-from django.http import HttpResponse, HttpRequest
-from django.test import TestCase, RequestFactory
-
-from request_token.decorators import use_request_token, _get_request_arg
+from django.http import HttpRequest, HttpResponse
+from django.test import RequestFactory, TestCase
+from request_token.decorators import _get_request_arg, use_request_token
 from request_token.exceptions import ScopeError, TokenNotFoundError
 from request_token.middleware import RequestTokenMiddleware
 from request_token.models import RequestToken, RequestTokenLog
@@ -17,7 +16,6 @@ def test_view_func(request):
 
 
 class TestClassBasedView(object):
-
     @use_request_token(scope="foobar")
     def test_response(self, request):
         """Return decorated request / response objects."""
@@ -51,10 +49,10 @@ class DecoratorTests(TestCase):
         return request
 
     def test_no_token(self):
-        request = self._request('/', None, AnonymousUser())
+        request = self._request("/", None, AnonymousUser())
         response = test_view_func(request)
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(hasattr(request, 'token'))
+        self.assertFalse(hasattr(request, "token"))
         self.assertFalse(RequestTokenLog.objects.exists())
 
         # now force a TokenNotFoundError, by requiring it in the decorator
@@ -66,12 +64,12 @@ class DecoratorTests(TestCase):
 
     def test_scope(self):
         token = RequestToken.objects.create_token(scope="foobar")
-        request = self._request('/', token.jwt(), AnonymousUser())
+        request = self._request("/", token.jwt(), AnonymousUser())
         self.assertRaises(ScopeError, test_view_func, request)
         self.assertFalse(RequestTokenLog.objects.exists())
 
         RequestToken.objects.all().update(scope="foo")
-        request = self._request('/', token.jwt(), AnonymousUser())
+        request = self._request("/", token.jwt(), AnonymousUser())
         response = test_view_func(request)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(RequestTokenLog.objects.exists())
@@ -80,7 +78,7 @@ class DecoratorTests(TestCase):
         """Test that CBV methods extract the request correctly."""
         cbv = TestClassBasedView()
         token = RequestToken.objects.create_token(scope="foobar")
-        request = self._request('/', token.jwt(), AnonymousUser())
+        request = self._request("/", token.jwt(), AnonymousUser())
         response = cbv.test_response(request)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(int(response.content), token.id)

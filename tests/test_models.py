@@ -1,27 +1,25 @@
 import datetime
 from unittest import mock
 
-from jwt.exceptions import InvalidAudienceError
-
-from django.contrib.sessions.middleware import SessionMiddleware
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.models import AnonymousUser
+from django.contrib.sessions.middleware import SessionMiddleware
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.http import HttpResponse
-from django.test import TestCase, RequestFactory
+from django.test import RequestFactory, TestCase
 from django.utils.timezone import now as tz_now
-
+from jwt.exceptions import InvalidAudienceError
 from request_token.exceptions import MaxUseError
 from request_token.models import (
-    parse_xff,
     RequestToken,
     RequestTokenErrorLog,
     RequestTokenErrorLogQuerySet,
     RequestTokenLog,
+    parse_xff,
 )
 from request_token.settings import JWT_SESSION_TOKEN_EXPIRY
-from request_token.utils import to_seconds, decode
+from request_token.utils import decode, to_seconds
 
 
 class RequestTokenTests(TestCase):
@@ -31,15 +29,13 @@ class RequestTokenTests(TestCase):
     def setUp(self):
         # ensure user has unicode chars
         self.user = get_user_model().objects.create_user(
-            'zoidberg',
-            first_name=u'ß∂ƒ©˙∆',
-            last_name=u'ƒ∆'
+            "zoidberg", first_name=u"ß∂ƒ©˙∆", last_name=u"ƒ∆"
         )
 
     def test_defaults(self):
         token = RequestToken()
         self.assertIsNone(token.user)
-        self.assertEqual(token.scope, '')
+        self.assertEqual(token.scope, "")
         self.assertEqual(token.login_mode, RequestToken.LOGIN_MODE_NONE)
         self.assertIsNone(token.expiration_time)
         self.assertIsNone(token.not_before_time)
@@ -57,7 +53,7 @@ class RequestTokenTests(TestCase):
         token = RequestToken().save()
         self.assertIsNotNone(token)
         self.assertIsNone(token.user)
-        self.assertEqual(token.scope, '')
+        self.assertEqual(token.scope, "")
         self.assertEqual(token.login_mode, RequestToken.LOGIN_MODE_NONE)
         self.assertIsNone(token.expiration_time)
         self.assertIsNone(token.not_before_time)
@@ -67,16 +63,14 @@ class RequestTokenTests(TestCase):
         self.assertEqual(token.used_to_date, 0)
 
         token.issued_at = None
-        token = token.save(update_fields=['issued_at'])
+        token = token.save(update_fields=["issued_at"])
         self.assertIsNone(token.issued_at)
 
         now = tz_now()
         expires = now + datetime.timedelta(minutes=JWT_SESSION_TOKEN_EXPIRY)
-        with mock.patch('request_token.models.tz_now', lambda: now):
+        with mock.patch("request_token.models.tz_now", lambda: now):
             token = RequestToken(
-                login_mode=RequestToken.LOGIN_MODE_SESSION,
-                user=self.user,
-                scope="foo"
+                login_mode=RequestToken.LOGIN_MODE_SESSION, user=self.user, scope="foo"
             )
             self.assertIsNone(token.issued_at)
             self.assertIsNone(token.expiration_time)
@@ -90,7 +84,7 @@ class RequestTokenTests(TestCase):
         # an attr, not a callable
         self.assertEqual(len(token.claims), 3)
         self.assertEqual(token.max, 1)
-        self.assertEqual(token.sub, '')
+        self.assertEqual(token.sub, "")
         self.assertIsNone(token.jti)
         self.assertIsNone(token.aud)
         self.assertIsNone(token.exp)
@@ -103,7 +97,9 @@ class RequestTokenTests(TestCase):
         self.assertEqual(len(token.claims), 4)
 
         token.login_mode = RequestToken.LOGIN_MODE_REQUEST
-        self.assertEqual(token.claims['mod'], RequestToken.LOGIN_MODE_REQUEST[:1].lower())
+        self.assertEqual(
+            token.claims["mod"], RequestToken.LOGIN_MODE_REQUEST[:1].lower()
+        )
         self.assertEqual(len(token.claims), 4)
 
         now = tz_now()
@@ -118,7 +114,7 @@ class RequestTokenTests(TestCase):
         self.assertEqual(len(token.claims), 6)
 
         # saving updates the id and issued_at timestamp
-        with mock.patch('request_token.models.tz_now', lambda: now):
+        with mock.patch("request_token.models.tz_now", lambda: now):
             token.save()
             self.assertEqual(token.iat, now_sec)
             self.assertEqual(token.jti, token.id)
@@ -128,7 +124,7 @@ class RequestTokenTests(TestCase):
         """Test the data field is really JSON."""
         token = RequestToken(data={"foo": True})
         token.save()
-        self.assertTrue(token.data['foo'])
+        self.assertTrue(token.data["foo"])
 
     def test_clean(self):
 
@@ -161,62 +157,64 @@ class RequestTokenTests(TestCase):
         reset_session()
         token.clean()
         token.max_uses = 10
-        assertValidationFails('max_uses')
+        assertValidationFails("max_uses")
 
         reset_session()
         token.user = None
-        assertValidationFails('user')
+        assertValidationFails("user")
 
         reset_session()
         token.expiration_time = None
-        assertValidationFails('expiration_time')
+        assertValidationFails("expiration_time")
 
     def test_log(self):
         token = RequestToken().save()
         factory = RequestFactory()
-        request = factory.get('/')
+        request = factory.get("/")
         request.user = AnonymousUser()
         request.META = {}
         response = HttpResponse("foo", status=123)
 
         def assertUsedToDate(expected):
-            token.refresh_from_db(fields=['used_to_date'])
+            token.refresh_from_db(fields=["used_to_date"])
             self.assertEqual(token.used_to_date, expected)
 
         log = token.log(request, response)
         self.assertEqual(RequestTokenLog.objects.get(), log)
         self.assertEqual(log.user, None)
         self.assertEqual(log.token, token)
-        self.assertEqual(log.user_agent, 'unknown')
+        self.assertEqual(log.user_agent, "unknown")
         self.assertEqual(log.client_ip, None)
         self.assertEqual(log.status_code, 123)
         assertUsedToDate(1)
 
-        request.META['REMOTE_ADDR'] = '192.168.0.1'
+        request.META["REMOTE_ADDR"] = "192.168.0.1"
         log = token.log(request, response)
-        self.assertEqual(log.client_ip, '192.168.0.1')
+        self.assertEqual(log.client_ip, "192.168.0.1")
         assertUsedToDate(2)
 
-        request.META['HTTP_X_FORWARDED_FOR'] = '192.168.0.2'
+        request.META["HTTP_X_FORWARDED_FOR"] = "192.168.0.2"
         log = token.log(request, response)
-        self.assertEqual(log.client_ip, '192.168.0.2')
+        self.assertEqual(log.client_ip, "192.168.0.2")
         assertUsedToDate(3)
 
-        request.META['HTTP_USER_AGENT'] = 'test_agent'
+        request.META["HTTP_USER_AGENT"] = "test_agent"
         log = token.log(request, response)
-        self.assertEqual(log.user_agent, 'test_agent')
-        token.refresh_from_db(fields=['used_to_date'])
+        self.assertEqual(log.user_agent, "test_agent")
+        token.refresh_from_db(fields=["used_to_date"])
         assertUsedToDate(4)
 
-        with mock.patch.object(RequestTokenErrorLogQuerySet, 'create_error_log') as mock_log:
-            log = token.log(request, response, MaxUseError('foo'))
+        with mock.patch.object(
+            RequestTokenErrorLogQuerySet, "create_error_log"
+        ) as mock_log:
+            log = token.log(request, response, MaxUseError("foo"))
             self.assertEqual(mock_log.call_count, 1)
-            self.assertEqual(log.user_agent, 'test_agent')
-            token.refresh_from_db(fields=['used_to_date'])
+            self.assertEqual(log.user_agent, "test_agent")
+            token.refresh_from_db(fields=["used_to_date"])
             assertUsedToDate(5)
 
     def test_jwt(self):
-        token = RequestToken(id=1, scope='foo').save()
+        token = RequestToken(id=1, scope="foo").save()
         jwt = token.jwt()
         self.assertEqual(decode(jwt), token.claims)
 
@@ -230,15 +228,13 @@ class RequestTokenTests(TestCase):
         factory = RequestFactory()
         middleware = SessionMiddleware()
         anon = AnonymousUser()
-        request = factory.get('/foo')
+        request = factory.get("/foo")
         middleware.process_request(request)
         request.user = anon
 
         # try default token
         token = RequestToken.objects.create_token(
-            scope="foo",
-            max_uses=10,
-            login_mode=RequestToken.LOGIN_MODE_NONE
+            scope="foo", max_uses=10, login_mode=RequestToken.LOGIN_MODE_NONE
         )
         request = token._auth_is_anonymous(request)
         self.assertEqual(request.user, anon)
@@ -249,11 +245,11 @@ class RequestTokenTests(TestCase):
             user=user1,
             scope="foo",
             max_uses=10,
-            login_mode=RequestToken.LOGIN_MODE_REQUEST
+            login_mode=RequestToken.LOGIN_MODE_REQUEST,
         )
         token._auth_is_anonymous(request)
         self.assertEqual(request.user, user1)
-        self.assertFalse(hasattr(token.user, 'backend'))
+        self.assertFalse(hasattr(token.user, "backend"))
 
         # try a session token
         logout(request)
@@ -261,7 +257,9 @@ class RequestTokenTests(TestCase):
         token.login_mode = RequestToken.LOGIN_MODE_SESSION
         request = token._auth_is_anonymous(request)
         self.assertEqual(request.user, user1)
-        self.assertEqual(token.user.backend, 'django.contrib.auth.backends.ModelBackend')
+        self.assertEqual(
+            token.user.backend, "django.contrib.auth.backends.ModelBackend"
+        )
 
         # authenticated user fails
         request.user = user1
@@ -270,16 +268,14 @@ class RequestTokenTests(TestCase):
     def test__auth_is_authenticated(self):
         factory = RequestFactory()
         middleware = SessionMiddleware()
-        request = factory.get('/foo')
+        request = factory.get("/foo")
         middleware.process_request(request)
         user1 = get_user_model().objects.create_user(username="Jekyll")
         request.user = user1
 
         # try default token
         token = RequestToken.objects.create_token(
-            scope="foo",
-            max_uses=10,
-            login_mode=RequestToken.LOGIN_MODE_NONE
+            scope="foo", max_uses=10, login_mode=RequestToken.LOGIN_MODE_NONE
         )
         request = token._auth_is_authenticated(request)
         self.assertEqual(request.user, user1)
@@ -289,7 +285,7 @@ class RequestTokenTests(TestCase):
             user=user1,
             scope="foo",
             max_uses=10,
-            login_mode=RequestToken.LOGIN_MODE_REQUEST
+            login_mode=RequestToken.LOGIN_MODE_REQUEST,
         )
         request = token._auth_is_authenticated(request)
 
@@ -308,7 +304,7 @@ class RequestTokenTests(TestCase):
         factory = RequestFactory()
         middleware = SessionMiddleware()
         anon = AnonymousUser()
-        request = factory.get('/foo')
+        request = factory.get("/foo")
         middleware.process_request(request)
         request.user = anon
 
@@ -317,7 +313,7 @@ class RequestTokenTests(TestCase):
             user=user1,
             scope="foo",
             max_uses=10,
-            login_mode=RequestToken.LOGIN_MODE_REQUEST
+            login_mode=RequestToken.LOGIN_MODE_REQUEST,
         )
         token.authenticate(request)
         self.assertEqual(request.user, user1)
@@ -328,25 +324,22 @@ class RequestTokenTests(TestCase):
     def test_expire(self):
         expiry = tz_now() + datetime.timedelta(days=1)
         token = RequestToken.objects.create_token(
-            scope="foo",
-            login_mode=RequestToken.LOGIN_MODE_NONE,
-            expiration_time=expiry
+            scope="foo", login_mode=RequestToken.LOGIN_MODE_NONE, expiration_time=expiry
         )
         self.assertTrue(token.expiration_time == expiry)
         token.expire()
         self.assertTrue(token.expiration_time < expiry)
 
     def test_parse_xff(self):
-
         def assertMeta(meta, expected):
             self.assertEqual(parse_xff(meta), expected)
 
         assertMeta(None, None)
-        assertMeta('', '')
-        assertMeta('foo', 'foo')
-        assertMeta('foo, bar, baz', 'foo')
-        assertMeta('foo , bar, baz', 'foo')
-        assertMeta("8.8.8.8, 123.124.125.126", '8.8.8.8')
+        assertMeta("", "")
+        assertMeta("foo", "foo")
+        assertMeta("foo, bar, baz", "foo")
+        assertMeta("foo , bar, baz", "foo")
+        assertMeta("8.8.8.8, 123.124.125.126", "8.8.8.8")
 
 
 class RequestTokenQuerySetTests(TestCase):
@@ -356,32 +349,24 @@ class RequestTokenQuerySetTests(TestCase):
     def test_create_token(self):
         self.assertRaises(TypeError, RequestToken.objects.create_token)
         RequestToken.objects.create_token(scope="foo")
-        self.assertEqual(RequestToken.objects.get().scope, 'foo')
+        self.assertEqual(RequestToken.objects.get().scope, "foo")
 
 
 class RequestTokenErrorLogQuerySetTests(TestCase):
-
     def test_create_error_log(self):
         user = get_user_model().objects.create_user(
-            'zoidberg',
-            first_name=u'∂ƒ©˙∆',
-            last_name=u'†¥¨^'
+            "zoidberg", first_name=u"∂ƒ©˙∆", last_name=u"†¥¨^"
         )
         token = RequestToken.objects.create_token(
-            scope='foo',
-            user=user,
-            login_mode=RequestToken.LOGIN_MODE_REQUEST
+            scope="foo", user=user, login_mode=RequestToken.LOGIN_MODE_REQUEST
         )
         log = RequestTokenLog(token=token, user=user).save()
-        elog = RequestTokenErrorLog.objects.create_error_log(
-            log,
-            MaxUseError('foo')
-        )
+        elog = RequestTokenErrorLog.objects.create_error_log(log, MaxUseError("foo"))
         self.assertEqual(elog.token, token)
         self.assertEqual(elog.log, log)
-        self.assertEqual(elog.error_type, 'MaxUseError')
-        self.assertEqual(elog.error_message, 'foo')
-        self.assertEqual(str(elog), 'foo')
+        self.assertEqual(elog.error_type, "MaxUseError")
+        self.assertEqual(elog.error_message, "foo")
+        self.assertEqual(str(elog), "foo")
 
 
 class RequestTokenLogTests(TestCase):
@@ -390,24 +375,17 @@ class RequestTokenLogTests(TestCase):
 
     def setUp(self):
         self.user = get_user_model().objects.create_user(
-            'zoidberg',
-            first_name=u'∂ƒ©˙∆',
-            last_name=u'†¥¨^'
+            "zoidberg", first_name=u"∂ƒ©˙∆", last_name=u"†¥¨^"
         )
         self.token = RequestToken.objects.create_token(
-            scope='foo',
-            user=self.user,
-            login_mode=RequestToken.LOGIN_MODE_REQUEST
+            scope="foo", user=self.user, login_mode=RequestToken.LOGIN_MODE_REQUEST
         )
 
     def test_defaults(self):
-        log = RequestTokenLog(
-            token=self.token,
-            user=self.user
-        )
+        log = RequestTokenLog(token=self.token, user=self.user)
         self.assertEqual(log.user, self.user)
         self.assertEqual(log.token, self.token)
-        self.assertEqual(log.user_agent, '')
+        self.assertEqual(log.user_agent, "")
         self.assertEqual(log.client_ip, None)
         self.assertIsNone(log.timestamp)
 
@@ -416,10 +394,7 @@ class RequestTokenLogTests(TestCase):
         self.assertIsNotNone(repr(token))
 
     def test_string_repr(self):
-        log = RequestTokenLog(
-            token=self.token,
-            user=self.user
-        )
+        log = RequestTokenLog(token=self.token, user=self.user)
         self.assertIsNotNone(str(log))
         self.assertIsNotNone(repr(log))
 
@@ -428,21 +403,15 @@ class RequestTokenLogTests(TestCase):
         self.assertIsNotNone(repr(log))
 
     def test_save(self):
-        log = RequestTokenLog(
-            token=self.token,
-            user=self.user
-        ).save()
+        log = RequestTokenLog(token=self.token, user=self.user).save()
         self.assertIsNotNone(log.timestamp)
 
         log.timestamp = None
-        self.assertRaises(IntegrityError, log.save, update_fields=['timestamp'])
+        self.assertRaises(IntegrityError, log.save, update_fields=["timestamp"])
 
     def test_ipv6(self):
         """Test that IP v4 and v6 are handled."""
-        log = RequestTokenLog(
-            token=self.token,
-            user=self.user
-        ).save()
+        log = RequestTokenLog(token=self.token, user=self.user).save()
         self.assertIsNone(log.client_ip)
 
         def assertIP(ip):
@@ -450,8 +419,8 @@ class RequestTokenLogTests(TestCase):
             log.save()
             self.assertEqual(log.client_ip, ip)
 
-        assertIP('192.168.0.1')
+        assertIP("192.168.0.1")
         # taken from http://ipv6.com/articles/general/IPv6-Addressing.htm
-        assertIP('2001:cdba:0000:0000:0000:0000:3257:9652')
-        assertIP('2001:cdba:0:0:0:0:3257:9652')
-        assertIP('2001:cdba::3257:9652')
+        assertIP("2001:cdba:0000:0000:0000:0000:3257:9652")
+        assertIP("2001:cdba:0:0:0:0:3257:9652")
+        assertIP("2001:cdba::3257:9652")

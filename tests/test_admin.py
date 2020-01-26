@@ -1,12 +1,10 @@
 import datetime
 from unittest import mock
 
-from jwt.exceptions import MissingRequiredClaimError
-
 from django.test import TestCase
 from django.utils.timezone import now as tz_now
-
-from request_token.admin import pretty_print, RequestTokenAdmin
+from jwt.exceptions import MissingRequiredClaimError
+from request_token.admin import RequestTokenAdmin, pretty_print
 from request_token.models import RequestToken
 
 
@@ -17,8 +15,8 @@ class AdminTests(TestCase):
     def test_pretty_print(self):
         self.assertEqual(pretty_print(None), None)
         self.assertEqual(
-            pretty_print({'foo': True}),
-            '<pre><code>{<br>&nbsp;&nbsp;&nbsp;&nbsp;"foo":&nbsp;true<br>}</code></pre>'
+            pretty_print({"foo": True}),
+            '<pre><code>{<br>&nbsp;&nbsp;&nbsp;&nbsp;"foo":&nbsp;true<br>}</code></pre>',
         )
 
 
@@ -26,7 +24,7 @@ class RequestTokenAdminTests(TestCase):
 
     """RequestTokenAdmin class tests."""
 
-    @mock.patch('request_token.models.tz_now')
+    @mock.patch("request_token.models.tz_now")
     def test_is_valid(self, mock_now):
         now = tz_now()
         mock_now.return_value = now
@@ -52,7 +50,7 @@ class RequestTokenAdminTests(TestCase):
         self.assertTrue(admin.is_valid(token))
 
     def test_jwt(self):
-        token = RequestToken(id=1, scope='foo').save()
+        token = RequestToken(id=1, scope="foo").save()
         admin = RequestTokenAdmin(RequestToken, None)
         self.assertEqual(admin.jwt(token), token.jwt())
 
@@ -61,18 +59,18 @@ class RequestTokenAdminTests(TestCase):
         self.assertEqual(admin.jwt(token), None)
 
     def test_claims(self):
-        token = RequestToken(id=1, scope='foo').save()
+        token = RequestToken(id=1, scope="foo").save()
         admin = RequestTokenAdmin(RequestToken, None)
         self.assertEqual(admin._claims(token), pretty_print(token.claims))
 
     def test_parsed(self):
-        token = RequestToken(id=1, scope='foo', data='{"foo": true}').save()
+        token = RequestToken(id=1, scope="foo", data='{"foo": true}').save()
         admin = RequestTokenAdmin(RequestToken, None)
         parsed = admin._parsed(token)
-        self.assertTrue('header' in parsed)
-        self.assertTrue('claims' in parsed)
-        self.assertTrue('signature' in parsed)
+        self.assertTrue("header" in parsed)
+        self.assertTrue("claims" in parsed)
+        self.assertTrue("signature" in parsed)
 
         # if the token is invalid we get None back
-        with mock.patch.object(RequestToken, 'jwt', side_effect=Exception()):
+        with mock.patch.object(RequestToken, "jwt", side_effect=Exception()):
             self.assertIsNone(admin._parsed(token))

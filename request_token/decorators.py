@@ -1,22 +1,29 @@
+from __future__ import annotations
+
 import functools
 import logging
+from typing import Any, Callable, Optional
 
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse
 
 from .exceptions import ScopeError, TokenNotFoundError
 
 logger = logging.getLogger(__name__)
 
 
-def _get_request_arg(*args):
+def _get_request_arg(*args: Any) -> Optional[HttpRequest]:
     """Extract the arg that is an HttpRequest object."""
     for arg in args:
         if isinstance(arg, HttpRequest):
             return arg
+    return None
 
 
-def use_request_token(view_func=None, scope=None, required=False):
-    """Decorator used to indicate that a view function supports RequestTokens.
+def use_request_token(
+    view_func: Callable, scope: Optional[str] = None, required: bool = False
+) -> Callable:
+    """
+    Decorate view functions that supports RequestTokens.
 
     This decorator is used in conjunction with RequestTokens and the
     RequestTokenMiddleware. By the time that a request has passed through the
@@ -38,19 +45,17 @@ def use_request_token(view_func=None, scope=None, required=False):
     https://blogs.it.ox.ac.uk/inapickle/2012/01/05/python-decorators-with-optional-arguments/
 
     """
-    assert scope, "Decorator scope cannot be empty."
-
-    if view_func is None:
-        return functools.partial(use_request_token, scope=scope, required=required)
+    if not scope:
+        raise ValueError("Decorator scope cannot be empty.")
 
     @functools.wraps(view_func)
-    def inner(*args, **kwargs):
+    def inner(*args: Any, **kwargs: Any) -> HttpResponse:
         # HACK: if this is decorating a method, then the first arg will be
         # the object (self), and not the request. In order to make this work
         # with functions and methods we need to determine where the request
         # arg is.
         request = _get_request_arg(*args)
-        token = getattr(request, 'token', None)
+        token = getattr(request, "token", None)
         if token is None:
             if required is True:
                 raise TokenNotFoundError()
@@ -69,8 +74,7 @@ def use_request_token(view_func=None, scope=None, required=False):
                 return response
             else:
                 raise ScopeError(
-                    "RequestToken scope mismatch: '%s' != '%s'" %
-                    (token.scope, scope)
+                    "RequestToken scope mismatch: '%s' != '%s'" % (token.scope, scope)
                 )
 
     return inner

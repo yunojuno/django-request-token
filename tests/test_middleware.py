@@ -1,14 +1,11 @@
 import json
 from unittest import mock
 
-from jwt import exceptions
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse
-from django.test import TestCase, RequestFactory
-
-
+from django.test import RequestFactory, TestCase
+from jwt import exceptions
 from request_token.middleware import RequestTokenMiddleware
 from request_token.models import RequestToken
 from request_token.settings import JWT_QUERYSTRING_ARG
@@ -28,32 +25,32 @@ class MiddlewareTests(TestCase):
     """RequestTokenMiddleware tests."""
 
     def setUp(self):
-        self.user = get_user_model().objects.create_user('zoidberg')
+        self.user = get_user_model().objects.create_user("zoidberg")
         self.factory = RequestFactory()
         self.middleware = RequestTokenMiddleware(get_response=lambda r: HttpResponse())
         self.token = RequestToken.objects.create_token(scope="foo")
 
     def get_request(self):
-        request = self.factory.get('/?%s=%s' % (JWT_QUERYSTRING_ARG, self.token.jwt()))
+        request = self.factory.get("/?%s=%s" % (JWT_QUERYSTRING_ARG, self.token.jwt()))
         request.user = self.user
         request.session = MockSession()
         return request
 
     def post_request(self):
-        request = self.factory.post('/', {JWT_QUERYSTRING_ARG: self.token.jwt()})
+        request = self.factory.post("/", {JWT_QUERYSTRING_ARG: self.token.jwt()})
         request.user = self.user
         request.session = MockSession()
         return request
 
     def post_request_with_JSON(self):
         data = json.dumps({JWT_QUERYSTRING_ARG: self.token.jwt()})
-        request = self.factory.post('/', data, 'application/json')
+        request = self.factory.post("/", data, "application/json")
         request.user = self.user
         request.session = MockSession()
         return request
 
     def test_process_request_assertions(self):
-        request = self.factory.get('/')
+        request = self.factory.get("/")
         self.assertRaises(AssertionError, self.middleware, request)
 
         request.user = AnonymousUser()
@@ -61,14 +58,14 @@ class MiddlewareTests(TestCase):
         request.session = MockSession()
 
         self.middleware(request)
-        self.assertFalse(hasattr(request, 'token'))
+        self.assertFalse(hasattr(request, "token"))
 
     def test_process_request_without_token(self):
-        request = self.factory.get('/')
+        request = self.factory.get("/")
         request.user = AnonymousUser()
         request.session = MockSession()
         self.middleware(request)
-        self.assertFalse(hasattr(request, 'token'))
+        self.assertFalse(hasattr(request, "token"))
 
     def test_process_GET_request_with_valid_token(self):
         request = self.get_request()
@@ -87,24 +84,24 @@ class MiddlewareTests(TestCase):
 
     def test_process_request_not_allowed(self):
         # PUT requests won't decode the token
-        request = self.factory.put('/?rt=foo')
+        request = self.factory.put("/?rt=foo")
         request.user = self.user
         request.session = MockSession()
         response = self.middleware(request)
-        self.assertFalse(hasattr(request, 'token'))
+        self.assertFalse(hasattr(request, "token"))
         self.assertEqual(response.status_code, 200)
 
-    @mock.patch('request_token.middleware.logger')
+    @mock.patch("request_token.middleware.logger")
     def test_process_request_token_error(self, mock_logger):
         # token decode error - request passes through _without_ a token
-        request = self.factory.get('/?rt=foo')
+        request = self.factory.get("/?rt=foo")
         request.user = self.user
         request.session = MockSession()
         self.middleware(request)
         self.assertIsNone(request.token)
         self.assertEqual(mock_logger.exception.call_count, 1)
 
-    @mock.patch('request_token.middleware.logger')
+    @mock.patch("request_token.middleware.logger")
     def test_process_request_token_does_not_exist(self, mock_logger):
         request = self.get_request()
         self.token.delete()
@@ -112,7 +109,7 @@ class MiddlewareTests(TestCase):
         self.assertIsNone(request.token)
         self.assertEqual(mock_logger.exception.call_count, 1)
 
-    @mock.patch.object(RequestToken, 'log')
+    @mock.patch.object(RequestToken, "log")
     def test_process_exception(self, mock_log):
         request = self.get_request()
         request.token = self.token
