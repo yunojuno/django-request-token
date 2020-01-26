@@ -45,13 +45,15 @@ def decode(
     token: bytes,
     options: Dict[str, bool] = DEFAULT_DECODE_OPTIONS,
     check_claims: Sequence[str] = MANDATORY_CLAIMS,
-    algorithms: Optional[List[str]] = None
+    algorithms: Optional[List[str]] = None,
 ) -> dict:
     """Decode JWT payload and check for 'jti', 'sub' claims."""
     if not algorithms:
         # default encode algorithm - see PyJWT.encode
         algorithms = ["HS256"]
-    decoded = jwt_decode(token, settings.SECRET_KEY, algorithms=algorithms, options=options)
+    decoded = jwt_decode(
+        token, settings.SECRET_KEY, algorithms=algorithms, options=options
+    )
     check_mandatory_claims(decoded, claims=check_claims)
     return decoded
 

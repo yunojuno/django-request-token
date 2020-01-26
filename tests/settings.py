@@ -4,7 +4,7 @@ from os import getenv
 import django
 
 DJANGO_VERSION = StrictVersion(django.get_version())
-assert DJANGO_VERSION >= StrictVersion("1.11")
+assert DJANGO_VERSION >= StrictVersion("2.2")
 
 DEBUG = True
 
@@ -24,6 +24,7 @@ INSTALLED_APPS = (
     "django.contrib.auth",
     "django.contrib.sessions",
     "django.contrib.contenttypes",
+    "django.contrib.messages",
     "request_token",
     "tests",
 )
@@ -31,6 +32,7 @@ INSTALLED_APPS = (
 MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "request_token.middleware.RequestTokenMiddleware",
@@ -46,6 +48,7 @@ TEMPLATES = [
         "OPTIONS": {
             "context_processors": [
                 "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
                 "request_token.context_processors.request_token",
             ]
         },
