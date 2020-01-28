@@ -43,11 +43,15 @@ def encode(payload: dict, check_claims: Sequence[str] = MANDATORY_CLAIMS) -> byt
 
 def decode(
     token: bytes,
-    options: Dict[str, bool] = DEFAULT_DECODE_OPTIONS,
-    check_claims: Sequence[str] = MANDATORY_CLAIMS,
+    options: Optional[Dict[str, bool]] = None,
+    check_claims: Optional[Sequence[str]] = None,
     algorithms: Optional[List[str]] = None,
 ) -> dict:
     """Decode JWT payload and check for 'jti', 'sub' claims."""
+    if not options:
+        options = DEFAULT_DECODE_OPTIONS
+    if not check_claims:
+        check_claims = MANDATORY_CLAIMS
     if not algorithms:
         # default encode algorithm - see PyJWT.encode
         algorithms = ["HS256"]
@@ -62,5 +66,5 @@ def to_seconds(timestamp: datetime.datetime) -> Optional[int]:
     """Convert timestamp into integers since epoch."""
     try:
         return calendar.timegm(timestamp.utctimetuple())
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return None
