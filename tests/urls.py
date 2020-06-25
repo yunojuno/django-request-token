@@ -1,14 +1,14 @@
-try:
-    from django.urls import re_path
-except ImportError:
-    from django.conf.urls import url as re_path
-
+from django.conf import settings
+from django.urls import path
+from django.contrib import admin
 from .views import decorated, roundtrip, undecorated
+from django.conf.urls.static import static
 
 app_name = "tests"
 
 urlpatterns = [
-    re_path(r"^decorated/$", decorated, name="decorated"),
-    re_path(r"^roundtrip/$", roundtrip, name="roundtrip"),
-    re_path(r"^undecorated/$", undecorated, name="undecorated"),
-]
+    path("admin/", admin.site.urls),
+    path("decorated/$", decorated, name="decorated"),
+    path("roundtrip/", roundtrip, name="roundtrip"),
+    path("undecorated/", undecorated, name="undecorated"),
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

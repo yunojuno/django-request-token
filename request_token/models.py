@@ -15,7 +15,7 @@ from django.utils.timezone import now as tz_now
 from jwt.exceptions import InvalidAudienceError, InvalidTokenError
 
 from .exceptions import MaxUseError
-from .settings import JWT_SESSION_TOKEN_EXPIRY, LOG_TOKEN_ERRORS
+from .settings import DEFAULT_MAX_USES, JWT_SESSION_TOKEN_EXPIRY, LOG_TOKEN_ERRORS
 from .utils import encode, to_seconds
 
 logger = logging.getLogger(__name__)
@@ -117,7 +117,8 @@ class RequestToken(models.Model):
         help_text="Time the token was created (set in the initial save).",
     )
     max_uses = models.IntegerField(
-        default=1, help_text="The maximum number of times the token can be used."
+        default=DEFAULT_MAX_USES,
+        help_text="The maximum number of times the token can be used.",
     )
     used_to_date = models.IntegerField(
         default=0,
@@ -204,10 +205,7 @@ class RequestToken(models.Model):
         if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
             if self.user is None:
                 raise ValidationError({"user": "Session token must have a user."})
-            if self.max_uses != 1:
-                raise ValidationError(
-                    {"max_uses": "Session token must have max_use of 1."}
-                )
+
             if self.expiration_time is None:
                 raise ValidationError(
                     {"expiration_time": "Session token must have an expiration_time."}

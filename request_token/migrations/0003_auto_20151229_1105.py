@@ -4,6 +4,8 @@ from __future__ import unicode_literals
 from django.conf import settings
 from django.db import migrations, models
 
+from ..settings import DEFAULT_MAX_USES
+
 
 class Migration(migrations.Migration):
 
@@ -42,7 +44,7 @@ class Migration(migrations.Migration):
             model_name="requesttoken",
             name="max_uses",
             field=models.IntegerField(
-                default=1,
+                default=DEFAULT_MAX_USES,
                 help_text="The maximum number of times the token can be used.",
             ),
         ),

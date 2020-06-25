@@ -138,7 +138,7 @@ useful for automatic logins. A good example of this is the email login process
 on medium.com, which takes an email address (no password) and sends out a login
 link.
 
-Session tokens must be single-use, and have a fixed expiry of one minute.
+Session tokens have a default expiry of ten minutes.
 
 .. code:: python
 
