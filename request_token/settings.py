@@ -26,3 +26,6 @@ LOG_TOKEN_ERRORS = _env_or_setting(
     "true",
     "1",
 )  # noqa
+
+
+DEFAULT_MAX_USES = _env_or_setting("REQUEST_TOKEN_DEFAULT_MAX_USES", 10)
