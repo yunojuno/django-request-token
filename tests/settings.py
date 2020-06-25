@@ -11,7 +11,7 @@ DEBUG = True
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": getenv("TEST_DB_NAME", "test"),
+        "NAME": getenv("TEST_DB_NAME", "request_token"),
         "USER": getenv("TEST_DB_USER", "postgres"),
         "PASSWORD": getenv("TEST_DB_PASSWORD", "postgres"),
         "HOST": getenv("TEST_DB_HOST", "localhost"),
@@ -25,6 +25,7 @@ INSTALLED_APPS = (
     "django.contrib.sessions",
     "django.contrib.contenttypes",
     "django.contrib.messages",
+    "django.contrib.staticfiles",
     "request_token",
     "tests",
 )
@@ -32,8 +33,8 @@ INSTALLED_APPS = (
 MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "request_token.middleware.RequestTokenMiddleware",
 ]
@@ -64,6 +65,8 @@ ROOT_URLCONF = "tests.urls"
 APPEND_SLASH = True
 
 STATIC_URL = "/static/"
+
+STATIC_ROOT = "./static"
 
 TIME_ZONE = "UTC"
 

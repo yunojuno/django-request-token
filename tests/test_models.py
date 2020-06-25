@@ -18,7 +18,7 @@ from request_token.models import (
     RequestTokenLog,
     parse_xff,
 )
-from request_token.settings import JWT_SESSION_TOKEN_EXPIRY
+from request_token.settings import JWT_SESSION_TOKEN_EXPIRY, DEFAULT_MAX_USES
 from request_token.utils import decode, to_seconds
 
 
@@ -41,7 +41,7 @@ class RequestTokenTests(TestCase):
         self.assertIsNone(token.not_before_time)
         self.assertEqual(token.data, {})
         self.assertIsNone(token.issued_at)
-        self.assertEqual(token.max_uses, 1)
+        self.assertEqual(token.max_uses, DEFAULT_MAX_USES)
         self.assertEqual(token.used_to_date, 0)
 
     def test_string_repr(self):
@@ -59,7 +59,7 @@ class RequestTokenTests(TestCase):
         self.assertIsNone(token.not_before_time)
         self.assertEqual(token.data, {})
         self.assertIsNotNone(token.issued_at)
-        self.assertEqual(token.max_uses, 1)
+        self.assertEqual(token.max_uses, DEFAULT_MAX_USES)
         self.assertEqual(token.used_to_date, 0)
 
         token.issued_at = None
@@ -83,7 +83,7 @@ class RequestTokenTests(TestCase):
         # raises error with no id set - put into context manager as it's
         # an attr, not a callable
         self.assertEqual(len(token.claims), 3)
-        self.assertEqual(token.max, 1)
+        self.assertEqual(token.max, DEFAULT_MAX_USES)
         self.assertEqual(token.sub, "")
         self.assertIsNone(token.jti)
         self.assertIsNone(token.aud)
@@ -146,19 +146,14 @@ class RequestTokenTests(TestCase):
             token.user = self.user
             token.issued_at = tz_now()
             token.expiration_time = token.issued_at + datetime.timedelta(minutes=1)
-            token.max_uses = 1
+            token.max_uses = DEFAULT_MAX_USES
 
         def assertValidationFails(field_name):
             with self.assertRaises(ValidationError) as ctx:
                 token.clean()
             self.assertTrue(field_name in dict(ctx.exception))
 
-        # check the rest_session works!
-        reset_session()
-        token.clean()
-        token.max_uses = 10
-        assertValidationFails("max_uses")
-
+        # check the reset_session works!
         reset_session()
         token.user = None
         assertValidationFails("user")
