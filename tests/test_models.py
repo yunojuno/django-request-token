@@ -1,6 +1,8 @@
 import datetime
+import re
 from unittest import mock
 
+import pytest
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.sessions.middleware import SessionMiddleware
@@ -10,6 +12,7 @@ from django.http import HttpResponse
 from django.test import RequestFactory, TestCase
 from django.utils.timezone import now as tz_now
 from jwt.exceptions import InvalidAudienceError
+
 from request_token.exceptions import MaxUseError
 from request_token.models import (
     RequestToken,
@@ -18,7 +21,7 @@ from request_token.models import (
     RequestTokenLog,
     parse_xff,
 )
-from request_token.settings import JWT_SESSION_TOKEN_EXPIRY, DEFAULT_MAX_USES
+from request_token.settings import DEFAULT_MAX_USES, JWT_SESSION_TOKEN_EXPIRY
 from request_token.utils import decode, to_seconds
 
 
@@ -70,13 +73,12 @@ class RequestTokenTests(TestCase):
         expires = now + datetime.timedelta(minutes=JWT_SESSION_TOKEN_EXPIRY)
         with mock.patch("request_token.models.tz_now", lambda: now):
             token = RequestToken(
-                login_mode=RequestToken.LOGIN_MODE_SESSION, user=self.user, scope="foo"
+                login_mode=RequestToken.LOGIN_MODE_REQUEST, user=self.user, scope="foo"
             )
             self.assertIsNone(token.issued_at)
             self.assertIsNone(token.expiration_time)
             token.save()
             self.assertEqual(token.issued_at, now)
-            self.assertEqual(token.expiration_time, expires)
 
     def test_claims(self):
         token = RequestToken()
@@ -139,28 +141,6 @@ class RequestTokenTests(TestCase):
         token.clean()
         token.user = None
         self.assertRaises(ValidationError, token.clean)
-
-        def reset_session():
-            """Reset properties so that token passes validation."""
-            token.login_mode = RequestToken.LOGIN_MODE_SESSION
-            token.user = self.user
-            token.issued_at = tz_now()
-            token.expiration_time = token.issued_at + datetime.timedelta(minutes=1)
-            token.max_uses = DEFAULT_MAX_USES
-
-        def assertValidationFails(field_name):
-            with self.assertRaises(ValidationError) as ctx:
-                token.clean()
-            self.assertTrue(field_name in dict(ctx.exception))
-
-        # check the reset_session works!
-        reset_session()
-        token.user = None
-        assertValidationFails("user")
-
-        reset_session()
-        token.expiration_time = None
-        assertValidationFails("expiration_time")
 
     def test_log(self):
         token = RequestToken().save()
@@ -246,19 +226,38 @@ class RequestTokenTests(TestCase):
         self.assertEqual(request.user, user1)
         self.assertFalse(hasattr(token.user, "backend"))
 
-        # try a session token
-        logout(request)
-        request.user = anon
-        token.login_mode = RequestToken.LOGIN_MODE_SESSION
-        request = token._auth_is_anonymous(request)
-        self.assertEqual(request.user, user1)
-        self.assertEqual(
-            token.user.backend, "django.contrib.auth.backends.ModelBackend"
-        )
+    def test__auth_is_anonymous__authenticated(self):
+        factory = RequestFactory()
+        middleware = SessionMiddleware()
+        anon = AnonymousUser()
+        request = factory.get("/foo")
+        middleware.process_request(request)
 
-        # authenticated user fails
-        request.user = user1
+        # try request token
+        request.user = get_user_model().objects.create_user(username="Finbar")
+        token = RequestToken.objects.create_token(
+            user=request.user,
+            scope="foo",
+            max_uses=10,
+            login_mode=RequestToken.LOGIN_MODE_REQUEST,
+        )
         self.assertRaises(InvalidAudienceError, token._auth_is_anonymous, request)
+
+    def test__auth_is_anonymous__session_deprecated(self):
+        factory = RequestFactory()
+        middleware = SessionMiddleware()
+        anon = AnonymousUser()
+        user1 = get_user_model().objects.create_user(username="Finbar")
+        request = factory.get("/foo")
+        middleware.process_request(request)
+        request.user = anon
+
+        # can no longer save session tokens, so save as NONE and set mode after
+        token = RequestToken.objects.create_token(
+            scope="foo", user=user1, login_mode=RequestToken.LOGIN_MODE_NONE
+        )
+        token.login_mode = RequestToken.LOGIN_MODE_SESSION
+        self.assertRaises(DeprecationWarning, token._auth_is_anonymous, request)
 
     def test__auth_is_authenticated(self):
         factory = RequestFactory()
