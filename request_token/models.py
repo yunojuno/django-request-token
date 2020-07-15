@@ -202,7 +202,14 @@ class RequestToken(models.Model):
         if self.login_mode == RequestToken.LOGIN_MODE_NONE:
             pass
         if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
-            raise DeprecationWarning("Session mode tokens are no longer supported.")
+            logger.warning("Session tokens are no longer supported")
+            if self.user is None:
+                raise ValidationError({"user": "Session token must have a user."})
+
+            if self.expiration_time is None:
+                raise ValidationError(
+                    {"expiration_time": "Session token must have an expiration_time."}
+                )
 
         if self.login_mode == RequestToken.LOGIN_MODE_REQUEST:
             if self.user is None:
@@ -214,7 +221,7 @@ class RequestToken(models.Model):
         if "update_fields" not in kwargs:
             self.issued_at = self.issued_at or tz_now()
             if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
-                raise DeprecationWarning("Session mode tokens are no longer supported.")
+                logger.warning("Session tokens are no longer supported")
         self.clean()
         super(RequestToken, self).save(*args, **kwargs)
         return self
