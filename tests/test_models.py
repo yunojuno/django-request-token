@@ -128,19 +128,29 @@ class RequestTokenTests(TestCase):
         token.save()
         self.assertTrue(token.data["foo"])
 
-    def test_clean(self):
-
+    def test_clean__none(self):
         # LOGIN_MODE_NONE doesn't care about user.
         token = RequestToken(login_mode=RequestToken.LOGIN_MODE_NONE)
         token.clean()
         token.user = self.user
         token.clean()
 
+    def test_clean__request(self):
         # request mode
-        token.login_mode = RequestToken.LOGIN_MODE_REQUEST
+        token = RequestToken(login_mode=RequestToken.LOGIN_MODE_REQUEST)
+        token.user = self.user
         token.clean()
         token.user = None
         self.assertRaises(ValidationError, token.clean)
+
+    def test_check_deprecation__default(self):
+        token = RequestToken(login_mode=RequestToken.LOGIN_MODE_SESSION)
+        self.assertRaises(DeprecationWarning, token.check_deprecation)
+
+    def test_check_deprecation__override(self):
+        token = RequestToken(login_mode=RequestToken.LOGIN_MODE_SESSION)
+        with mock.patch("request_token.models.ENABLE_SESSION_TOKENS", True):
+            token.check_deprecation()
 
     def test_log(self):
         token = RequestToken().save()
@@ -229,7 +239,6 @@ class RequestTokenTests(TestCase):
     def test__auth_is_anonymous__authenticated(self):
         factory = RequestFactory()
         middleware = SessionMiddleware()
-        anon = AnonymousUser()
         request = factory.get("/foo")
         middleware.process_request(request)
 
@@ -242,22 +251,6 @@ class RequestTokenTests(TestCase):
             login_mode=RequestToken.LOGIN_MODE_REQUEST,
         )
         self.assertRaises(InvalidAudienceError, token._auth_is_anonymous, request)
-
-    def test__auth_is_anonymous__session_deprecated(self):
-        factory = RequestFactory()
-        middleware = SessionMiddleware()
-        anon = AnonymousUser()
-        user1 = get_user_model().objects.create_user(username="Finbar")
-        request = factory.get("/foo")
-        middleware.process_request(request)
-        request.user = anon
-
-        # can no longer save session tokens, so save as NONE and set mode after
-        token = RequestToken.objects.create_token(
-            scope="foo", user=user1, login_mode=RequestToken.LOGIN_MODE_NONE
-        )
-        token.login_mode = RequestToken.LOGIN_MODE_SESSION
-        self.assertRaises(DeprecationWarning, token._auth_is_anonymous, request)
 
     def test__auth_is_authenticated(self):
         factory = RequestFactory()

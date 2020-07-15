@@ -139,6 +139,11 @@ links in emails, and thereby expire the token. The functionality has been replac
 by a library (https://github.com/yunojuno/django-magic-link) specifically designed
 for this use case.
 
+If you must continue to support session tokens, you can override this deprecation by
+setting the ``REQUEST_TOKEN_ENABLE_SESSION_TOKENS`` value. However, please be aware
+that a future update will include a data migration that will immediately disable all
+session tokens, and remove the functionality entirely.
+
 Implementation
 ==============
 
@@ -316,6 +321,9 @@ able to diagnose issues from the admin site is useful, however if the volume
 or errors is a problem this can be disabled by setting this value to anything
 other than 'True' or '1'.
 
+* ``REQUEST_TOKEN_ENABLE_SESSION_TOKENS``
+
+Set this to True (False by default) to continue to support session tokens.
 
 Logging
 =======

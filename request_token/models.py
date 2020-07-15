@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import logging
+import warnings
 from typing import Any, Optional
 
 from django.conf import settings
@@ -14,7 +15,7 @@ from django.utils.timezone import now as tz_now
 from jwt.exceptions import InvalidAudienceError, InvalidTokenError
 
 from .exceptions import MaxUseError
-from .settings import DEFAULT_MAX_USES, LOG_TOKEN_ERRORS
+from .settings import DEFAULT_MAX_USES, ENABLE_SESSION_TOKENS, LOG_TOKEN_ERRORS
 from .utils import encode, to_seconds
 
 logger = logging.getLogger(__name__)
@@ -202,7 +203,7 @@ class RequestToken(models.Model):
         if self.login_mode == RequestToken.LOGIN_MODE_NONE:
             pass
         if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
-            logger.warning("Session tokens are no longer supported")
+            warnings.warn("Session tokens are no longer supported.", DeprecationWarning)
             if self.user is None:
                 raise ValidationError({"user": "Session token must have a user."})
 
@@ -218,10 +219,9 @@ class RequestToken(models.Model):
                 )
 
     def save(self, *args: Any, **kwargs: Any) -> RequestToken:
+        self.check_deprecation()
         if "update_fields" not in kwargs:
             self.issued_at = self.issued_at or tz_now()
-            if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
-                logger.warning("Session tokens are no longer supported")
         self.clean()
         super(RequestToken, self).save(*args, **kwargs)
         return self
@@ -254,9 +254,6 @@ class RequestToken(models.Model):
             )
             request.user = self.user
 
-        if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
-            raise DeprecationWarning("Session mode tokens are no longer supported.")
-
         return request
 
     def _auth_is_authenticated(self, request: HttpRequest) -> HttpRequest:
@@ -283,10 +280,21 @@ class RequestToken(models.Model):
         has a user assigned, then this will be added to the request.
 
         """
+        self.check_deprecation()
         if request.user.is_anonymous:
             return self._auth_is_anonymous(request)
         else:
             return self._auth_is_authenticated(request)
+
+    def check_deprecation(self) -> None:
+        """Check for deprecated use of session tokens."""
+        if ENABLE_SESSION_TOKENS:
+            return
+        if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
+            raise DeprecationWarning(
+                "Session tokens are no longer supported. If you must continue to use "
+                "them, update your settings. See README for more details."
+            )
 
     @transaction.atomic
     def log(
