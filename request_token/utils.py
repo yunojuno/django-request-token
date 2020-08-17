@@ -35,14 +35,14 @@ def check_mandatory_claims(
             raise exceptions.MissingRequiredClaimError(claim)
 
 
-def encode(payload: dict, check_claims: Sequence[str] = MANDATORY_CLAIMS) -> bytes:
+def encode(payload: dict, check_claims: Sequence[str] = MANDATORY_CLAIMS) -> str:
     """Encode JSON payload (using SECRET_KEY)."""
     check_mandatory_claims(payload, claims=check_claims)
     return jwt_encode(payload, settings.SECRET_KEY)
 
 
 def decode(
-    token: bytes,
+    token: str,
     options: Optional[Dict[str, bool]] = None,
     check_claims: Optional[Sequence[str]] = None,
     algorithms: Optional[List[str]] = None,

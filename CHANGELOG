@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12] - 2020-08-17
+
+No functional changes - just updating classifiers and CI support.
+
+### Added
+
+-   Add Django 3.1 support
+-   Add Django master to CI build matrix
+
 ## [0.10] - 2020-01-26
 
 ### Added

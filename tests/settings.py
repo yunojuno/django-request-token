@@ -8,16 +8,23 @@ assert DJANGO_VERSION >= StrictVersion("2.2")
 
 DEBUG = True
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": getenv("TEST_DB_NAME", "request_token"),
-        "USER": getenv("TEST_DB_USER", "postgres"),
-        "PASSWORD": getenv("TEST_DB_PASSWORD", "postgres"),
-        "HOST": getenv("TEST_DB_HOST", "localhost"),
-        "PORT": getenv("TEST_DB_PORT", "5432"),
+try:
+    from django.db.models import JSONField  # noqa: F401
+
+    DATABASES = {
+        "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": "test.db",}
     }
-}
+except ImportError:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": getenv("TEST_DB_NAME", "request_token"),
+            "USER": getenv("TEST_DB_USER", "postgres"),
+            "PASSWORD": getenv("TEST_DB_PASSWORD", "postgres"),
+            "HOST": getenv("TEST_DB_HOST", "localhost"),
+            "PORT": getenv("TEST_DB_PORT", "5432"),
+        }
+    }
 
 INSTALLED_APPS = (
     "django.contrib.admin",
@@ -48,6 +55,7 @@ TEMPLATES = [
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
+                "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "request_token.context_processors.request_token",

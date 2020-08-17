@@ -4,3 +4,4 @@
 .tox
 poetry.lock
 static
+test.db

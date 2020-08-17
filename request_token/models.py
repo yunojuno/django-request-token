@@ -8,9 +8,9 @@ from django.conf import settings
 from django.contrib.auth import login
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
-from django.http import HttpRequest
-from django.http.response import HttpResponse
+from django.http import HttpRequest, HttpResponse
 from django.utils.timezone import now as tz_now
+from django.utils.translation import gettext_lazy as _lazy
 from jwt.exceptions import InvalidAudienceError, InvalidTokenError
 
 from .compat import JSONField
@@ -69,15 +69,15 @@ class RequestToken(models.Model):
     LOGIN_MODE_SESSION = "Session"
 
     LOGIN_MODE_CHOICES = (
-        (LOGIN_MODE_NONE, "Do not authenticate"),
-        (LOGIN_MODE_REQUEST, "Authenticate a single request"),
-        (LOGIN_MODE_SESSION, "Authenticate for the entire session"),
+        (LOGIN_MODE_NONE, _lazy("Do not authenticate")),
+        (LOGIN_MODE_REQUEST, _lazy("Authenticate a single request")),
+        (LOGIN_MODE_SESSION, _lazy("Authenticate for the entire session")),
     )
     login_mode = models.CharField(
         max_length=10,
         default=LOGIN_MODE_NONE,
         choices=LOGIN_MODE_CHOICES,
-        help_text="How should the request be authenticated?",
+        help_text=_lazy("How should the request be authenticated?"),
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -85,26 +85,30 @@ class RequestToken(models.Model):
         blank=True,
         null=True,
         on_delete=models.CASCADE,
-        help_text="Intended recipient of the JWT (can be used by anyone if not set).",
+        help_text=_lazy(
+            "Intended recipient of the JWT (can be used by anyone if not set)."
+        ),
     )
     scope = models.CharField(
         max_length=100,
-        help_text="Label used to match request to view function in decorator.",
+        help_text=_lazy("Label used to match request to view function in decorator."),
     )
     expiration_time = models.DateTimeField(
         blank=True,
         null=True,
-        help_text="Token will expire at this time (raises ExpiredSignatureError).",
+        help_text=_lazy(
+            "Token will expire at this time (raises ExpiredSignatureError)."
+        ),
     )
     not_before_time = models.DateTimeField(
         blank=True,
         null=True,
-        help_text=(
+        help_text=_lazy(
             "Token cannot be used before this time (raises ImmatureSignatureError)."
         ),
     )
     data = JSONField(
-        help_text=(
+        help_text=_lazy(
             "Custom data add to the token, but not encoded (must be fetched from DB)."
         ),
         blank=True,
@@ -114,15 +118,15 @@ class RequestToken(models.Model):
     issued_at = models.DateTimeField(
         blank=True,
         null=True,
-        help_text="Time the token was created (set in the initial save).",
+        help_text=_lazy("Time the token was created (set in the initial save)."),
     )
     max_uses = models.IntegerField(
         default=DEFAULT_MAX_USES,
-        help_text="The maximum number of times the token can be used.",
+        help_text=_lazy("The maximum number of times the token can be used."),
     )
     used_to_date = models.IntegerField(
         default=0,
-        help_text=(
+        help_text=_lazy(
             "Number of times the token has been used to date (raises MaxUseError)."
         ),
     )
@@ -230,7 +234,7 @@ class RequestToken(models.Model):
 
     def jwt(self) -> str:
         """Encode the token claims into a JWT."""
-        return encode(self.claims).decode()
+        return encode(self.claims)
 
     def validate_max_uses(self) -> None:
         """
