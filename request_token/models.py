@@ -6,7 +6,6 @@ from typing import Any, Optional
 
 from django.conf import settings
 from django.contrib.auth import login
-from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.http import HttpRequest
@@ -14,6 +13,7 @@ from django.http.response import HttpResponse
 from django.utils.timezone import now as tz_now
 from jwt.exceptions import InvalidAudienceError, InvalidTokenError
 
+from .compat import JSONField
 from .exceptions import MaxUseError
 from .settings import DEFAULT_MAX_USES, JWT_SESSION_TOKEN_EXPIRY, LOG_TOKEN_ERRORS
 from .utils import encode, to_seconds

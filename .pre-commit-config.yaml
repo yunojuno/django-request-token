@@ -1,7 +1,7 @@
 repos:
     # python import sorting - will amend files
     - repo: https://github.com/pre-commit/mirrors-isort
-      rev: v4.3.21
+      rev: v5.4.2
       hooks:
           - id: isort
             language_version: python3.8
@@ -43,9 +43,3 @@ repos:
                 - --ignore-missing-imports
                 - --follow-imports=silent
             exclude: ^tests
-
-    # JS, JSON and SCSS formatting
-    - repo: https://github.com/prettier/prettier
-      rev: 1.19.1
-      hooks:
-          - id: prettier
