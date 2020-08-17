@@ -267,7 +267,6 @@ class RequestTokenTests(TestCase):
         )
 
         # authenticated user fails
-        request.user = user1
         self.assertRaises(InvalidAudienceError, token._auth_is_anonymous, request)
 
     def test__auth_is_authenticated(self):
