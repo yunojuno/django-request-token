@@ -14,7 +14,7 @@ from django.utils.translation import gettext_lazy as _lazy
 from jwt.exceptions import InvalidAudienceError, InvalidTokenError
 
 from .compat import JSONField
-from .exceptions import MaxUseError
+from .exceptions import MaxUseError, TokenExpired
 from .settings import DEFAULT_MAX_USES, LOG_TOKEN_ERRORS
 from .utils import encode, to_jwt, to_seconds
 
@@ -200,6 +200,10 @@ class RequestToken(models.Model):
             claims["nbf"] = to_seconds(self.not_before_time)
         return claims
 
+    @property
+    def has_expired(self):
+        return self.expiration_time < tz_now()
+
     def clean(self) -> None:
         """Ensure that login_mode setting is valid."""
         if self.login_mode == RequestToken.LoginMode.REQUEST and not self.user:
@@ -226,22 +230,15 @@ class RequestToken(models.Model):
         if self.used_to_date >= self.max_uses:
             raise MaxUseError("RequestToken [%s] has exceeded max uses" % self.id)
 
-    def authenticate(self, request: HttpRequest) -> None:
+    def validate_expiry(self) -> None:
         """
-        Authenticate an HttpRequest with the token user.
+        Check the token expiry is still valid.
 
-        This method encapsulates the request handling - if the token
-        has a user assigned, then this will be added to the request.
+        Raises TokenExpired if invalid.
 
         """
-        if self.login_mode != self.LoginMode.REQUEST:
-            return
-        if request.user.is_authenticated and request.user != self.user:
-            raise InvalidAudienceError(
-                f"RequestToken #{self.id} audience mismatch: "
-                f"'{request.user.pk}' != '{self.user.pk}'"
-            )
-        request.user = self.user
+        if self.has_expired:
+            raise TokenExpired("RequestToken [%s] has expired" % self.id)
 
     @transaction.atomic
     def log(

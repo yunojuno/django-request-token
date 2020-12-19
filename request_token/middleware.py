@@ -3,8 +3,10 @@ from datetime import datetime
 
 import json
 import logging
+from request_token.exceptions import TokenExpired
 from typing import Callable, Optional
 from django.contrib.sessions.backends.base import SessionBase
+from django.core import exceptions
 
 from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpResponseForbidden
@@ -30,13 +32,19 @@ def has_expired(claims: dict) -> bool:
 
 
 def get_token_from_jwt(jwt: str) -> Optional[RequestToken]:
-    """Decode JWT and fetch associated RequestToken object."""
-    # in the event of an error we log it, but then let the request
-    # continue - as the fact that the token cannot be decoded, or
-    # no longer exists, may not invalidate the request itself.
+    """
+    Decode JWT and fetch associated RequestToken object.
+
+    In the event of an error we log it, but then let the request
+    continue - as the fact that the token cannot be decoded, or
+    no longer exists, may not invalidate the request itself.
+    """
     try:
         payload = decode(jwt)
-        return RequestToken.objects.get(id=payload["jti"])
+        token = RequestToken.objects.get(id=payload["jti"])
+        token.validate_expiry()
+    except TokenExpired:
+        logger.exception("RequestToken has expired: %s", jwt)
     except InvalidTokenError:
         logger.exception("RequestToken cannot be decoded: %s", jwt)
     except RequestToken.DoesNotExist:
@@ -44,7 +52,7 @@ def get_token_from_jwt(jwt: str) -> Optional[RequestToken]:
     return None
 
 
-def get_request_token(request: HttpRequest) -> Optional[RequestToken]:
+def get_request_jwt(request: HttpRequest) -> str:
     """Extract JWT token string from the incoming request."""
     if request.method not in ("GET", "POST"):
         return None
@@ -57,16 +65,12 @@ def get_request_token(request: HttpRequest) -> Optional[RequestToken]:
             return json.loads(request.body).get(JWT_QUERYSTRING_ARG)
         return request.POST.get(JWT_QUERYSTRING_ARG)
 
-    jwt = try_get() or try_post()
-    if not jwt:
-        return None
-
-    return get_token_from_jwt(jwt)
+    return try_get() or try_post() or ""
 
 
-def get_session_token(session: SessionBase) -> Optional[RequestToken]:
+def get_session_jwt(session: SessionBase) -> str:
     """
-    Fetch token from session and validate expiry.
+    Fetch JWT from session (and validate expiry).
 
     If the token is in the session it may have expired, in which
     case we just ignore it. It won't be added to the request, so
@@ -76,15 +80,18 @@ def get_session_token(session: SessionBase) -> Optional[RequestToken]:
     """
     claims = session.get(JWT_SESSION_TOKEN_KEY)
     if not claims:
-        return None
+        return ""
     if has_expired(claims):
-        return None
-    return get_token_from_jwt(to_jwt(claims))
+        return ""
+    return to_jwt(claims)
 
 
 def get_token(request: HttpRequest) -> Optional[RequestToken]:
     """Return first valid token found in the request or the session."""
-    return get_request_token(request) or get_session_token(request.session)
+    jwt = get_request_jwt(request) or get_session_jwt(request.session)
+    if jwt:
+        return get_token_from_jwt(jwt)
+    return None
 
 
 def set_user(request: HttpRequest, token: RequestToken) -> None:
@@ -105,6 +112,8 @@ def set_user(request: HttpRequest, token: RequestToken) -> None:
 def set_token(request: HttpRequest, token: RequestToken) -> None:
     """Store token on the request and session objects."""
     request.token = token
+    # stashing the token ensures that it will be picked up on
+    # the next request.
     if token.stash:
         request.session[JWT_SESSION_TOKEN_KEY] = token.claims
 
@@ -123,21 +132,18 @@ class RequestTokenMiddleware:
 
     def __call__(self, request: HttpRequest) -> HttpResponse:  # noqa: C901
         """
-        Verify JWT request querystring arg.
+        Add RequestToken to request object if a valid token is found.
 
-        If a token is found (using JWT_QUERYSTRING_ARG), then it is decoded,
-        which verifies the signature and expiry dates, and raises a 403 if
-        the token is invalid.
+        This middleware supports a range of options for supplying the
+        JWT - it can be in the request querystring (default), the request
+        POST (via form or json), or retrived from the session if stashed
+        there from a previous request.
 
-        The decoded payload is then added to the request as the `token_payload`
-        property - allowing it to be interrogated by the view function
-        decorator when it gets there.
+        If a token is found, it is added as `request.token`, and stashed
+        in the session (if `token.stash == True`).
 
-        We don't substitute in the user at this point, as we are not making
-        any assumptions about the request path at this point - it's not until
-        we get to the view function that we know where we are heading - at
-        which point we verify that the scope matches, and only then do we
-        use the token user.
+        For LoginMode.REQUEST tokens it will also update the `request.user`
+        attribute.
 
         """
         if not hasattr(request, "session"):

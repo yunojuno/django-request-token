@@ -1,15 +1,13 @@
 import datetime
 from unittest import mock
 
-from django.contrib.auth import get_user_model, logout
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.contrib.sessions.middleware import SessionMiddleware
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.http import HttpRequest, HttpResponse
 from django.test import RequestFactory, TestCase
 from django.utils.timezone import now as tz_now
-from jwt.exceptions import InvalidAudienceError
 
 from request_token.exceptions import MaxUseError
 from request_token.models import (
@@ -19,7 +17,7 @@ from request_token.models import (
     RequestTokenLog,
     parse_xff,
 )
-from request_token.settings import DEFAULT_MAX_USES, JWT_SESSION_TOKEN_EXPIRY
+from request_token.settings import DEFAULT_MAX_USES
 from request_token.utils import decode, to_seconds
 
 
@@ -72,16 +70,15 @@ class RequestTokenTests(TestCase):
         self.assertIsNone(token.issued_at)
 
         now = tz_now()
-        expires = now + datetime.timedelta(minutes=JWT_SESSION_TOKEN_EXPIRY)
         with mock.patch("request_token.models.tz_now", lambda: now):
             token = RequestToken(
-                login_mode=RequestToken.LoginMode.SESSION, user=self.user, scope="foo"
+                login_mode=RequestToken.LoginMode.NONE, user=self.user, scope="foo"
             )
             self.assertIsNone(token.issued_at)
             self.assertIsNone(token.expiration_time)
             token.save()
             self.assertEqual(token.issued_at, now)
-            self.assertEqual(token.expiration_time, expires)
+            self.assertIsNone(token.expiration_time)
 
     def test_claims(self):
         token = RequestToken()
@@ -131,7 +128,7 @@ class RequestTokenTests(TestCase):
         token.save()
         self.assertTrue(token.data["foo"])
 
-    def test_clean(self):
+    def test_clean_NONE(self):
 
         # LoginMode.NONE doesn't care about user.
         token = RequestToken(login_mode=RequestToken.LoginMode.NONE)
@@ -139,24 +136,31 @@ class RequestTokenTests(TestCase):
         token.user = self.user
         token.clean()
 
+    def test_clean_REQUEST(self):
+
         # request mode
-        token.login_mode = RequestToken.LoginMode.REQUEST
+        token = RequestToken(login_mode=RequestToken.LoginMode.REQUEST)
         token.clean()
         token.user = None
         self.assertRaises(ValidationError, token.clean)
 
-        def reset_session():
-            """Reset properties so that token passes validation."""
-            token.login_mode = RequestToken.LoginMode.SESSION
-            token.user = self.user
-            token.issued_at = tz_now()
-            token.expiration_time = token.issued_at + datetime.timedelta(minutes=1)
-            token.max_uses = DEFAULT_MAX_USES
+    def test_clean_SESSION__no_user(self):
+
+        token = RequestToken(login_mode=RequestToken.LoginMode.SESSION)
+        token.login_mode = RequestToken.LoginMode.SESSION
+        token.user = self.user
+        token.issued_at = tz_now()
+        token.expiration_time = token.issued_at + datetime.timedelta(minutes=1)
+        token.max_uses = DEFAULT_MAX_USES
+        token.clean()
 
         def assertValidationFails(field_name):
             with self.assertRaises(ValidationError) as ctx:
                 token.clean()
             self.assertTrue(field_name in dict(ctx.exception))
+
+        token.user = None
+        assertValidationFails("user")
 
         # check the reset_session works!
         reset_session()

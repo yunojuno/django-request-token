@@ -17,9 +17,15 @@ class MockSession(object):
 
     """Fake Session model used to support `session_key` property."""
 
+    def __init__(self):
+        pass
+
     @property
     def session_key(self):
         return "foobar"
+
+    def get(self, key):
+        return {}
 
 
 class MiddlewareTests(TestCase):

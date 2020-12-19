@@ -25,3 +25,9 @@ class TokenNotFoundError(InvalidTokenError):
     """Error raised when a token is expected, but not found."""
 
     pass
+
+
+class TokenExpired(InvalidTokenError):
+    """Error raised when a token has expired."""
+
+    pass
