@@ -71,7 +71,6 @@ def use_request_token(
 
         if token.scope == scope:
             token.validate_max_uses()
-            token.authenticate(request)
             response = view_func(*args, **kwargs)
             # this will only log the request here if the view function
             # returns a valid HttpResponse object - if the view function
@@ -80,8 +79,6 @@ def use_request_token(
             token.log(request, response)
             return response
 
-        raise ScopeError(
-            "RequestToken scope mismatch: '%s' != '%s'" % (token.scope, scope)
-        )
+        raise ScopeError(f"RequestToken scope mismatch: '{token.scope}' != '{scope}'")
 
     return inner

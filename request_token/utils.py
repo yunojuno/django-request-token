@@ -42,7 +42,7 @@ def encode(payload: dict, check_claims: Sequence[str] = MANDATORY_CLAIMS) -> byt
 
 
 def decode(
-    token: bytes,
+    token: str,
     options: Optional[Dict[str, bool]] = None,
     check_claims: Optional[Sequence[str]] = None,
     algorithms: Optional[List[str]] = None,
@@ -68,3 +68,8 @@ def to_seconds(timestamp: datetime.datetime) -> Optional[int]:
         return calendar.timegm(timestamp.utctimetuple())
     except Exception:  # pylint: disable=broad-except
         return None
+
+
+def to_jwt(claims: dict) -> str:
+    """Convert claims dict into JWT."""
+    return encode(claims).decode()

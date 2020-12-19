@@ -41,7 +41,7 @@ class RequestTokenTests(TestCase):
         token = RequestToken()
         self.assertIsNone(token.user)
         self.assertEqual(token.scope, "")
-        self.assertEqual(token.login_mode, RequestToken.LOGIN_MODE_NONE)
+        self.assertEqual(token.login_mode, RequestToken.LoginMode.NONE)
         self.assertIsNone(token.expiration_time)
         self.assertIsNone(token.not_before_time)
         self.assertEqual(token.data, {})
@@ -59,7 +59,7 @@ class RequestTokenTests(TestCase):
         self.assertIsNotNone(token)
         self.assertIsNone(token.user)
         self.assertEqual(token.scope, "")
-        self.assertEqual(token.login_mode, RequestToken.LOGIN_MODE_NONE)
+        self.assertEqual(token.login_mode, RequestToken.LoginMode.NONE)
         self.assertIsNone(token.expiration_time)
         self.assertIsNone(token.not_before_time)
         self.assertEqual(token.data, {})
@@ -75,7 +75,7 @@ class RequestTokenTests(TestCase):
         expires = now + datetime.timedelta(minutes=JWT_SESSION_TOKEN_EXPIRY)
         with mock.patch("request_token.models.tz_now", lambda: now):
             token = RequestToken(
-                login_mode=RequestToken.LOGIN_MODE_SESSION, user=self.user, scope="foo"
+                login_mode=RequestToken.LoginMode.SESSION, user=self.user, scope="foo"
             )
             self.assertIsNone(token.issued_at)
             self.assertIsNone(token.expiration_time)
@@ -101,9 +101,9 @@ class RequestTokenTests(TestCase):
         self.assertEqual(token.aud, self.user.id)
         self.assertEqual(len(token.claims), 4)
 
-        token.login_mode = RequestToken.LOGIN_MODE_REQUEST
+        token.login_mode = RequestToken.LoginMode.REQUEST
         self.assertEqual(
-            token.claims["mod"], RequestToken.LOGIN_MODE_REQUEST[:1].lower()
+            token.claims["mod"], RequestToken.LoginMode.REQUEST[:1].lower()
         )
         self.assertEqual(len(token.claims), 4)
 
@@ -133,21 +133,21 @@ class RequestTokenTests(TestCase):
 
     def test_clean(self):
 
-        # LOGIN_MODE_NONE doesn't care about user.
-        token = RequestToken(login_mode=RequestToken.LOGIN_MODE_NONE)
+        # LoginMode.NONE doesn't care about user.
+        token = RequestToken(login_mode=RequestToken.LoginMode.NONE)
         token.clean()
         token.user = self.user
         token.clean()
 
         # request mode
-        token.login_mode = RequestToken.LOGIN_MODE_REQUEST
+        token.login_mode = RequestToken.LoginMode.REQUEST
         token.clean()
         token.user = None
         self.assertRaises(ValidationError, token.clean)
 
         def reset_session():
             """Reset properties so that token passes validation."""
-            token.login_mode = RequestToken.LOGIN_MODE_SESSION
+            token.login_mode = RequestToken.LoginMode.SESSION
             token.user = self.user
             token.issued_at = tz_now()
             token.expiration_time = token.issued_at + datetime.timedelta(minutes=1)
@@ -224,111 +224,10 @@ class RequestTokenTests(TestCase):
         token.used_to_date = token.max_uses
         self.assertRaises(MaxUseError, token.validate_max_uses)
 
-    def test__auth_is_anonymous(self):
-        factory = RequestFactory()
-        middleware = SessionMiddleware(get_response)
-        anon = AnonymousUser()
-        request = factory.get("/foo")
-        middleware.process_request(request)
-        request.user = anon
-
-        # try default token
-        token = RequestToken.objects.create_token(
-            scope="foo", max_uses=10, login_mode=RequestToken.LOGIN_MODE_NONE
-        )
-        request = token._auth_is_anonymous(request)
-        self.assertEqual(request.user, anon)
-
-        # try request token
-        user1 = get_user_model().objects.create_user(username="Finbar")
-        token = RequestToken.objects.create_token(
-            user=user1,
-            scope="foo",
-            max_uses=10,
-            login_mode=RequestToken.LOGIN_MODE_REQUEST,
-        )
-        token._auth_is_anonymous(request)
-        self.assertEqual(request.user, user1)
-        self.assertFalse(hasattr(token.user, "backend"))
-
-    def test__auth_is_anonymous__authenticated(self):
-        factory = RequestFactory()
-        middleware = SessionMiddleware(get_response)
-        request = factory.get("/foo")
-        middleware.process_request(request)
-
-        # try request token
-        request.user = get_user_model().objects.create_user(username="Finbar")
-        token = RequestToken.objects.create_token(
-            user=request.user,
-            scope="foo",
-            max_uses=10,
-            login_mode=RequestToken.LOGIN_MODE_REQUEST,
-        )
-
-        # authenticated user fails
-        self.assertRaises(InvalidAudienceError, token._auth_is_anonymous, request)
-
-    def test__auth_is_authenticated(self):
-        factory = RequestFactory()
-        middleware = SessionMiddleware(get_response)
-        request = factory.get("/foo")
-        middleware.process_request(request)
-        user1 = get_user_model().objects.create_user(username="Jekyll")
-        request.user = user1
-
-        # try default token
-        token = RequestToken.objects.create_token(
-            scope="foo", max_uses=10, login_mode=RequestToken.LOGIN_MODE_NONE
-        )
-        request = token._auth_is_authenticated(request)
-        self.assertEqual(request.user, user1)
-
-        # try request token
-        token = RequestToken.objects.create_token(
-            user=user1,
-            scope="foo",
-            max_uses=10,
-            login_mode=RequestToken.LOGIN_MODE_REQUEST,
-        )
-        request = token._auth_is_authenticated(request)
-
-        token.login_mode = RequestToken.LOGIN_MODE_SESSION
-        request = token._auth_is_authenticated(request)
-        self.assertEqual(request.user, user1)
-
-        token.user = get_user_model().objects.create_user(username="Hyde")
-        self.assertRaises(InvalidAudienceError, token._auth_is_authenticated, request)
-
-        # anonymous user fails
-        request.user = AnonymousUser()
-        self.assertRaises(InvalidAudienceError, token._auth_is_authenticated, request)
-
-    def test_authenticate(self):
-        factory = RequestFactory()
-        middleware = SessionMiddleware(get_response)
-        anon = AnonymousUser()
-        request = factory.get("/foo")
-        middleware.process_request(request)
-        request.user = anon
-
-        user1 = get_user_model().objects.create_user(username="Finbar")
-        token = RequestToken.objects.create_token(
-            user=user1,
-            scope="foo",
-            max_uses=10,
-            login_mode=RequestToken.LOGIN_MODE_REQUEST,
-        )
-        token.authenticate(request)
-        self.assertEqual(request.user, user1)
-
-        request.user = get_user_model().objects.create_user(username="Hyde")
-        self.assertRaises(InvalidAudienceError, token.authenticate, request)
-
     def test_expire(self):
         expiry = tz_now() + datetime.timedelta(days=1)
         token = RequestToken.objects.create_token(
-            scope="foo", login_mode=RequestToken.LOGIN_MODE_NONE, expiration_time=expiry
+            scope="foo", login_mode=RequestToken.LoginMode.NONE, expiration_time=expiry
         )
         self.assertTrue(token.expiration_time == expiry)
         token.expire()
@@ -362,7 +261,7 @@ class RequestTokenErrorLogQuerySetTests(TestCase):
             "zoidberg", first_name=u"∂ƒ©˙∆", last_name=u"†¥¨^"
         )
         token = RequestToken.objects.create_token(
-            scope="foo", user=user, login_mode=RequestToken.LOGIN_MODE_REQUEST
+            scope="foo", user=user, login_mode=RequestToken.LoginMode.REQUEST
         )
         log = RequestTokenLog(token=token, user=user).save()
         elog = RequestTokenErrorLog.objects.create_error_log(log, MaxUseError("foo"))
@@ -382,7 +281,7 @@ class RequestTokenLogTests(TestCase):
             "zoidberg", first_name=u"∂ƒ©˙∆", last_name=u"†¥¨^"
         )
         self.token = RequestToken.objects.create_token(
-            scope="foo", user=self.user, login_mode=RequestToken.LOGIN_MODE_REQUEST
+            scope="foo", user=self.user, login_mode=RequestToken.LoginMode.REQUEST
         )
 
     def test_defaults(self):

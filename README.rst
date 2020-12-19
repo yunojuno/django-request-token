@@ -71,7 +71,7 @@ the ``login_mode`` attribute of a request token:
 2. Single authenticated request
 3. Auto-login
 
-**Public Link** (``RequestToken.LOGIN_MODE_NONE``)
+**Public Link** (``RequestToken.LoginMode.NONE``)
 
 In this mode (the default for a new token), there is no authentication, and no
 assigned user. The token is used as a mechanism for attaching a payload
@@ -86,7 +86,7 @@ register.
     # as a user, but carrying a payload (affiliate_id).
     token = RequestToken.objects.create_token(
         scope="foo",
-        login_mode=RequestToken.LOGIN_MODE_NONE,
+        login_mode=RequestToken.LoginMode.NONE,
         data={
             'affiliate_id': 1
         }
@@ -104,7 +104,7 @@ register.
         )
 
 
-**Single Request** (``RequestToken.LOGIN_MODE_REQUEST``)
+**Single Request** (``RequestToken.LoginMode.REQUEST``)
 
 In Request mode, the request.user property is overridden by the user specified
 in the token, but only for a single request. This is useful for responding to
@@ -119,7 +119,7 @@ receive a 403 response.
     # a single request - not the entire session.
     token = RequestToken.objects.create_token(
         scope="foo",
-        login_mode=RequestToken.LOGIN_MODE_REQUEST,
+        login_mode=RequestToken.LoginMode.REQUEST,
         user=User.objects.get(username="hugo")
     )
 
@@ -129,7 +129,7 @@ receive a 403 response.
     function view_func(request):
         assert request.user == User.objects.get(username="hugo")
 
-**Auto-login** (``RequestToken.LOGIN_MODE_SESSION``)
+**Auto-login** (``RequestToken.LoginMode.SESSION``)
 
 This is the nuclear option, and must be treated with extreme care. Using a
 Session token will automatically log the user in for an entire session, giving
@@ -146,7 +146,7 @@ Session tokens have a default expiry of ten minutes.
     # NB use with caution.
     token = RequestToken.objects.create_token(
         scope="foo",
-        login_mode=RequestToken.LOGIN_MODE_SESSION,
+        login_mode=RequestToken.LoginMode.SESSION,
         user=User.objects.get(username="hugo")
     )
 

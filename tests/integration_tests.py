@@ -37,7 +37,7 @@ class ViewTests(TransactionTestCase):
             scope="foo",
             max_uses=2,
             user=self.user,
-            login_mode=RequestToken.LOGIN_MODE_REQUEST,
+            login_mode=RequestToken.LoginMode.REQUEST,
         )
         response = self.client.get(get_url("decorated", token))
         self.assertEqual(response.status_code, 200)
@@ -55,7 +55,7 @@ class ViewTests(TransactionTestCase):
             scope="foo",
             max_uses=1,
             user=self.user,
-            login_mode=RequestToken.LOGIN_MODE_SESSION,
+            login_mode=RequestToken.LoginMode.SESSION,
             expiration_time=(
                 datetime.now() + timedelta(minutes=JWT_SESSION_TOKEN_EXPIRY)
             ),
@@ -75,7 +75,7 @@ class ViewTests(TransactionTestCase):
     def test_get_post_token(self):
         """Test the GET > POST chain."""
         token = RequestToken.objects.create_token(
-            scope="bar", login_mode=RequestToken.LOGIN_MODE_NONE, max_uses=100
+            scope="bar", login_mode=RequestToken.LoginMode.NONE, max_uses=100
         )
         # expiry not set - we will do that explicitly in the POST
         self.assertTrue(token.expiration_time is None)

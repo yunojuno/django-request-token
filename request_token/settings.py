@@ -9,18 +9,19 @@ def _env_or_setting(key: str, default: Any) -> Any:
 
 
 # the name of GET argument to contain the token
-JWT_QUERYSTRING_ARG = _env_or_setting("REQUEST_TOKEN_QUERYSTRING", "rt")  # type: str
+JWT_QUERYSTRING_ARG: str = _env_or_setting("REQUEST_TOKEN_QUERYSTRING", "rt")
 
 # the fixed expiration check on Session tokens
-JWT_SESSION_TOKEN_EXPIRY = int(_env_or_setting("REQUEST_TOKEN_EXPIRY", 10))  # type: int
+JWT_SESSION_TOKEN_KEY: str = _env_or_setting("REQUEST_TOKEN_SESSION_KEY", "rt:session")
+
+# the fixed expiration check on Session tokens
+JWT_SESSION_TOKEN_EXPIRY: int = int(_env_or_setting("REQUEST_TOKEN_EXPIRY", 10))
 
 # Set the default 403 template value
-FOUR03_TEMPLATE = _env_or_setting(
-    "REQUEST_TOKEN_403_TEMPLATE", None
-)  # type: Optional[str]
+FOUR03_TEMPLATE: Optional[str] = _env_or_setting("REQUEST_TOKEN_403_TEMPLATE", None)
 
 # log all InvalidTokenErrors
-LOG_TOKEN_ERRORS = _env_or_setting(
+LOG_TOKEN_ERRORS: bool = _env_or_setting(
     "REQUEST_TOKEN_LOG_TOKEN_ERRORS", "True"
 ).lower() in (
     "true",
@@ -28,4 +29,4 @@ LOG_TOKEN_ERRORS = _env_or_setting(
 )  # noqa
 
 
-DEFAULT_MAX_USES = _env_or_setting("REQUEST_TOKEN_DEFAULT_MAX_USES", 10)
+DEFAULT_MAX_USES: int = int(_env_or_setting("REQUEST_TOKEN_DEFAULT_MAX_USES", 10))

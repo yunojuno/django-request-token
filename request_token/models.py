@@ -5,18 +5,18 @@ import logging
 from typing import Any, Optional
 
 from django.conf import settings
-from django.contrib.auth import login
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.http import HttpRequest
 from django.http.response import HttpResponse
 from django.utils.timezone import now as tz_now
+from django.utils.translation import gettext_lazy as _lazy
 from jwt.exceptions import InvalidAudienceError, InvalidTokenError
 
 from .compat import JSONField
 from .exceptions import MaxUseError
-from .settings import DEFAULT_MAX_USES, JWT_SESSION_TOKEN_EXPIRY, LOG_TOKEN_ERRORS
-from .utils import encode, to_seconds
+from .settings import DEFAULT_MAX_USES, LOG_TOKEN_ERRORS
+from .utils import encode, to_jwt, to_seconds
 
 logger = logging.getLogger(__name__)
 
@@ -61,50 +61,50 @@ class RequestToken(models.Model):
 
     """
 
-    # do not login the user on the request
-    LOGIN_MODE_NONE = "None"
-    # login the user, but only for the original request
-    LOGIN_MODE_REQUEST = "Request"
-    # login the user fully, but only for single-use short-duration links
-    LOGIN_MODE_SESSION = "Session"
+    class LoginMode(models.TextChoices):
+        # do not login the user on the request
+        NONE = "NONE", _lazy("Do not authenticate")
+        # login the user, but only for the original request
+        REQUEST = "REQUEST", _lazy("Authenticate a single request")
+        # login the user fully, but only for single-use short-duration links
+        SESSION = "LOGIN", _lazy("DEPRECATED: Authenticate for the entire session")
 
-    LOGIN_MODE_CHOICES = (
-        (LOGIN_MODE_NONE, "Do not authenticate"),
-        (LOGIN_MODE_REQUEST, "Authenticate a single request"),
-        (LOGIN_MODE_SESSION, "Authenticate for the entire session"),
-    )
     login_mode = models.CharField(
         max_length=10,
-        default=LOGIN_MODE_NONE,
-        choices=LOGIN_MODE_CHOICES,
-        help_text="How should the request be authenticated?",
+        default=LoginMode.NONE,
+        choices=LoginMode.choices,
+        help_text=_lazy("How should the request be authenticated?"),
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name="request_tokens",
         blank=True,
         null=True,
-        on_delete=models.CASCADE,
-        help_text="Intended recipient of the JWT (can be used by anyone if not set).",
+        on_delete=models.SET_NULL,
+        help_text=_lazy(
+            "Intended recipient of the JWT (can be used by anyone if not set)."
+        ),
     )
     scope = models.CharField(
         max_length=100,
-        help_text="Label used to match request to view function in decorator.",
+        help_text=_lazy("Label used to match request to view function in decorator."),
     )
     expiration_time = models.DateTimeField(
         blank=True,
         null=True,
-        help_text="Token will expire at this time (raises ExpiredSignatureError).",
+        help_text=_lazy(
+            "Token will expire at this time (raises ExpiredSignatureError)."
+        ),
     )
     not_before_time = models.DateTimeField(
         blank=True,
         null=True,
-        help_text=(
+        help_text=_lazy(
             "Token cannot be used before this time (raises ImmatureSignatureError)."
         ),
     )
     data = JSONField(
-        help_text=(
+        help_text=_lazy(
             "Custom data add to the token, but not encoded (must be fetched from DB)."
         ),
         blank=True,
@@ -114,17 +114,20 @@ class RequestToken(models.Model):
     issued_at = models.DateTimeField(
         blank=True,
         null=True,
-        help_text="Time the token was created (set in the initial save).",
+        help_text=_lazy("Time the token was created (set in the initial save)."),
     )
     max_uses = models.IntegerField(
         default=DEFAULT_MAX_USES,
-        help_text="The maximum number of times the token can be used.",
+        help_text=_lazy("The maximum number of times the token can be used."),
     )
     used_to_date = models.IntegerField(
         default=0,
-        help_text=(
+        help_text=_lazy(
             "Number of times the token has been used to date (raises MaxUseError)."
         ),
+    )
+    stash = models.BooleanField(
+        default=True, help_text=_lazy("Add token object to user session if True.")
     )
 
     objects = RequestTokenQuerySet.as_manager()
@@ -134,13 +137,12 @@ class RequestToken(models.Model):
         verbose_name_plural = "Tokens"
 
     def __str__(self) -> str:
-        return "Request token #%s" % (self.id)
+        return f"Request token #{self.id}"
 
     def __repr__(self) -> str:
-        return "<RequestToken id=%s scope=%s login_mode='%s'>" % (
-            self.id,
-            self.scope,
-            self.login_mode,
+        return (
+            f"<RequestToken id={self.id} scope={self.scope} "
+            f"login_mode='{self.login_mode}'>"
         )
 
     @property
@@ -200,37 +202,19 @@ class RequestToken(models.Model):
 
     def clean(self) -> None:
         """Ensure that login_mode setting is valid."""
-        if self.login_mode == RequestToken.LOGIN_MODE_NONE:
-            pass
-        if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
-            if self.user is None:
-                raise ValidationError({"user": "Session token must have a user."})
-
-            if self.expiration_time is None:
-                raise ValidationError(
-                    {"expiration_time": "Session token must have an expiration_time."}
-                )
-        if self.login_mode == RequestToken.LOGIN_MODE_REQUEST:
-            if self.user is None:
-                raise ValidationError(
-                    {"expiration_time": "Request token must have a user."}
-                )
+        if self.login_mode == RequestToken.LoginMode.REQUEST and not self.user:
+            raise ValidationError({"user": "Request token must have a user."})
 
     def save(self, *args: Any, **kwargs: Any) -> RequestToken:
         if "update_fields" not in kwargs:
             self.issued_at = self.issued_at or tz_now()
-            if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
-                self.expiration_time = self.expiration_time or (
-                    self.issued_at
-                    + datetime.timedelta(minutes=JWT_SESSION_TOKEN_EXPIRY)
-                )
         self.clean()
         super(RequestToken, self).save(*args, **kwargs)
         return self
 
     def jwt(self) -> str:
         """Encode the token claims into a JWT."""
-        return encode(self.claims).decode()
+        return to_jwt(self.claims)
 
     def validate_max_uses(self) -> None:
         """
@@ -242,49 +226,7 @@ class RequestToken(models.Model):
         if self.used_to_date >= self.max_uses:
             raise MaxUseError("RequestToken [%s] has exceeded max uses" % self.id)
 
-    def _auth_is_anonymous(self, request: HttpRequest) -> HttpRequest:
-        """Authenticate anonymous requests."""
-        if request.user.is_authenticated:
-            raise InvalidAudienceError("Token requires anonymous user.")
-
-        if self.login_mode == RequestToken.LOGIN_MODE_NONE:
-            pass
-
-        if self.login_mode == RequestToken.LOGIN_MODE_REQUEST:
-            logger.debug(
-                "Setting request.user to %r from token %i.", self.user, self.id
-            )
-            request.user = self.user
-
-        if self.login_mode == RequestToken.LOGIN_MODE_SESSION:
-            logger.debug(
-                "Authenticating request.user as %r from token %i.", self.user, self.id
-            )
-            # I _think_ we can get away with this as we are pulling the
-            # user out of the DB, and we are explicitly authenticating
-            # the user.
-            self.user.backend = "django.contrib.auth.backends.ModelBackend"
-            login(request, self.user)
-
-        return request
-
-    def _auth_is_authenticated(self, request: HttpRequest) -> HttpRequest:
-        """Authenticate requests with existing users."""
-        if request.user.is_anonymous:
-            raise InvalidAudienceError("Token requires authenticated user.")
-
-        if self.login_mode == RequestToken.LOGIN_MODE_NONE:
-            return request
-
-        if request.user == self.user:
-            return request
-
-        raise InvalidAudienceError(
-            "RequestToken [%i] audience mismatch: '%s' != '%s'"
-            % (self.id, request.user, self.user)
-        )
-
-    def authenticate(self, request: HttpRequest) -> HttpRequest:
+    def authenticate(self, request: HttpRequest) -> None:
         """
         Authenticate an HttpRequest with the token user.
 
@@ -292,10 +234,14 @@ class RequestToken(models.Model):
         has a user assigned, then this will be added to the request.
 
         """
-        if request.user.is_anonymous:
-            return self._auth_is_anonymous(request)
-        else:
-            return self._auth_is_authenticated(request)
+        if self.login_mode != self.LoginMode.REQUEST:
+            return
+        if request.user.is_authenticated and request.user != self.user:
+            raise InvalidAudienceError(
+                f"RequestToken #{self.id} audience mismatch: "
+                f"'{request.user.pk}' != '{self.user.pk}'"
+            )
+        request.user = self.user
 
     @transaction.atomic
     def log(
@@ -380,7 +326,7 @@ class RequestTokenLog(models.Model):
         settings.AUTH_USER_MODEL,
         blank=True,
         null=True,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         help_text="The user who made the request (None if anonymous).",
     )
     user_agent = models.TextField(
