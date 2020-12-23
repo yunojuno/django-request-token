@@ -85,7 +85,9 @@ class RequestToken(models.Model):
         blank=True,
         null=True,
         on_delete=models.CASCADE,
-        help_text=_lazy("Intended recipient of the JWT (can be used by anyone if not set)."),
+        help_text=_lazy(
+            "Intended recipient of the JWT (can be used by anyone if not set)."
+        ),
     )
     scope = models.CharField(
         max_length=100,
@@ -94,15 +96,21 @@ class RequestToken(models.Model):
     expiration_time = models.DateTimeField(
         blank=True,
         null=True,
-        help_text=_lazy("Token will expire at this time (raises ExpiredSignatureError)."),
+        help_text=_lazy(
+            "Token will expire at this time (raises ExpiredSignatureError)."
+        ),
     )
     not_before_time = models.DateTimeField(
         blank=True,
         null=True,
-        help_text=_lazy("Token cannot be used before this time (raises ImmatureSignatureError)."),
+        help_text=_lazy(
+            "Token cannot be used before this time (raises ImmatureSignatureError)."
+        ),
     )
     data = JSONField(
-        help_text=_lazy("Custom data add to the token, but not encoded (must be fetched from DB)."),
+        help_text=_lazy(
+            "Custom data add to the token, but not encoded (must be fetched from DB)."
+        ),
         blank=True,
         null=True,
         default=dict,
