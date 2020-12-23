@@ -87,7 +87,7 @@ class RequestTokenTests(TestCase):
         token = RequestToken()
         # raises error with no id set - put into context manager as it's
         # an attr, not a callable
-        self.assertEqual(len(token.claims), 3)
+        self.assertEqual(len(token.claims), 4)
         self.assertEqual(token.max, DEFAULT_MAX_USES)
         self.assertEqual(token.sub, "")
         self.assertIsNone(token.jti)
@@ -95,35 +95,36 @@ class RequestTokenTests(TestCase):
         self.assertIsNone(token.exp)
         self.assertIsNone(token.nbf)
         self.assertIsNone(token.iat)
+        self.assertEqual(token.ttl, 1)
 
         # now let's set some properties
         token.user = self.user
         self.assertEqual(token.aud, self.user.id)
-        self.assertEqual(len(token.claims), 4)
+        self.assertEqual(len(token.claims), 5)
 
         token.login_mode = RequestToken.LOGIN_MODE_REQUEST
         self.assertEqual(
             token.claims["mod"], RequestToken.LOGIN_MODE_REQUEST[:1].lower()
         )
-        self.assertEqual(len(token.claims), 4)
+        self.assertEqual(len(token.claims), 5)
 
         now = tz_now()
         now_sec = to_seconds(now)
 
         token.expiration_time = now
         self.assertEqual(token.exp, now_sec)
-        self.assertEqual(len(token.claims), 5)
+        self.assertEqual(len(token.claims), 6)
 
         token.not_before_time = now
         self.assertEqual(token.nbf, now_sec)
-        self.assertEqual(len(token.claims), 6)
+        self.assertEqual(len(token.claims), 7)
 
         # saving updates the id and issued_at timestamp
         with mock.patch("request_token.models.tz_now", lambda: now):
             token.save()
             self.assertEqual(token.iat, now_sec)
             self.assertEqual(token.jti, token.id)
-            self.assertEqual(len(token.claims), 8)
+            self.assertEqual(len(token.claims), 9)
 
     def test_json(self):
         """Test the data field is really JSON."""

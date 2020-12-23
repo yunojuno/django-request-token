@@ -44,6 +44,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "request_token.middleware.RequestTokenMiddleware",
+    "request_token.middleware.SessionTokenMiddleware",
 ]
 
 TEMPLATES = [

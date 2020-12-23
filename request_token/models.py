@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import logging
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from django.conf import settings
 from django.contrib.auth import login
@@ -16,17 +16,36 @@ from jwt.exceptions import InvalidAudienceError, InvalidTokenError
 from .compat import JSONField
 from .exceptions import MaxUseError
 from .settings import DEFAULT_MAX_USES, JWT_SESSION_TOKEN_EXPIRY, LOG_TOKEN_ERRORS
-from .utils import encode, to_seconds
+from .utils import decode, encode, to_seconds
 
 logger = logging.getLogger(__name__)
 
 
-class RequestTokenQuerySet(models.query.QuerySet):
-    """Custom QuerySet for RquestToken objects."""
-
+class RequestTokenManager(models.Manager):
     def create_token(self, scope: str, **kwargs: Any) -> RequestToken:
         """Create a new RequestToken."""
         return RequestToken(scope=scope, **kwargs).save()
+
+    def from_claims(self, claims: Dict) -> Optional[RequestToken]:
+        """Return RequestToken object from its claims dict."""
+        try:
+            return self.get(id=claims["jti"])
+        except KeyError:
+            raise ValueError("Claims dict missing 'jti' key.")
+        except RequestToken.DoesNotExist:
+            logger.exception("RequestToken does not exist: %s", claims)
+        return None
+
+    def from_jwt(self, jwt: str) -> Optional[RequestToken]:
+        """Decode JWT and fetch associated RequestToken object."""
+        try:
+            payload = decode(jwt)
+            return RequestToken.objects.get(id=payload["jti"])
+        except InvalidTokenError:
+            logger.exception("RequestToken cannot be decoded: %s", jwt)
+        except RequestToken.DoesNotExist:
+            logger.exception("RequestToken does not exist: %s", jwt)
+        return None
 
 
 class RequestToken(models.Model):
@@ -130,8 +149,15 @@ class RequestToken(models.Model):
             "Number of times the token has been used to date (raises MaxUseError)."
         ),
     )
+    ttl = models.IntegerField(
+        default=1,
+        help_text=_lazy(
+            "The number of requests before token is ejected from session "
+            "(requires SessionTokenMiddleware)."
+        ),
+    )
 
-    objects = RequestTokenQuerySet.as_manager()
+    objects = RequestTokenManager()
 
     class Meta:
         verbose_name = "Token"
@@ -189,6 +215,7 @@ class RequestToken(models.Model):
             "max": self.max_uses,
             "sub": self.scope,
             "mod": self.login_mode[:1].lower(),
+            "ttl": self.ttl,
         }
         if self.id is not None:
             claims["jti"] = self.id
@@ -245,6 +272,13 @@ class RequestToken(models.Model):
         """
         if self.used_to_date >= self.max_uses:
             raise MaxUseError("RequestToken [%s] has exceeded max uses" % self.id)
+
+    def decrement(self) -> RequestToken:
+        """Decrement the ttl attribute and save the object."""
+        if self.ttl == 0:
+            raise ValueError("TTL is already at zero.")
+        self.ttl -= 1
+        return self.save(update_fields=["ttl"])
 
     def _auth_is_anonymous(self, request: HttpRequest) -> HttpRequest:
         """Authenticate anonymous requests."""

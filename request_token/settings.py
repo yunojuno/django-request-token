@@ -14,6 +14,8 @@ JWT_QUERYSTRING_ARG = _env_or_setting("REQUEST_TOKEN_QUERYSTRING", "rt")  # type
 # the fixed expiration check on Session tokens
 JWT_SESSION_TOKEN_EXPIRY = int(_env_or_setting("REQUEST_TOKEN_EXPIRY", 10))  # type: int
 
+JWT_SESSION_CLAIMS_KEY = _env_or_setting("REQUEST_TOKEN_SESSION_KEY", "rt:session")
+
 # Set the default 403 template value
 FOUR03_TEMPLATE = _env_or_setting(
     "REQUEST_TOKEN_403_TEMPLATE", None
