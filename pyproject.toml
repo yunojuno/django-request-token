@@ -24,7 +24,7 @@ packages = [{ include = "request_token" }]
 [tool.poetry.dependencies]
 python = "^3.7"
 django = "^2.2 || ^3.0"
-pyjwt = "*"
+pyjwt = "^2.0"
 sqlparse = "*"
 
 [tool.poetry.dev-dependencies]
