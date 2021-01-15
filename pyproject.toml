@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-request-token"
-version = "0.12"
+version = "0.12.1"
 description = "JWT-backed Django app for managing querystring tokens."
 license = "MIT"
 authors = ["YunoJuno <code@yunojuno.com>"]
@@ -24,7 +24,9 @@ packages = [{ include = "request_token" }]
 [tool.poetry.dependencies]
 python = "^3.7"
 django = "^2.2 || ^3.0"
-pyjwt = "*"
+# pyjwt 2.0 changes encode/decode functions and a lot of other
+# dependencies require < 2, so this needs to be pinned for now.
+pyjwt = "^1.7"
 sqlparse = "*"
 
 [tool.poetry.dev-dependencies]

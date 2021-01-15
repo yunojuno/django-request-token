@@ -234,7 +234,7 @@ class RequestToken(models.Model):
 
     def jwt(self) -> str:
         """Encode the token claims into a JWT."""
-        return encode(self.claims)
+        return encode(self.claims).decode()
 
     def validate_max_uses(self) -> None:
         """
