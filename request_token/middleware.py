@@ -2,17 +2,16 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 from typing import Callable
 
-from django.core.exceptions import ImproperlyConfigured
-from django.http import HttpResponseForbidden
+from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.http.request import HttpRequest
 from django.http.response import HttpResponse
-from django.template import loader
 from jwt.exceptions import InvalidTokenError
 
 from .models import RequestToken
-from .settings import FOUR03_TEMPLATE, JWT_QUERYSTRING_ARG
+from .settings import JWT_QUERYSTRING_ARG
 from .utils import decode
 
 logger = logging.getLogger(__name__)
@@ -93,20 +92,5 @@ class RequestTokenMiddleware:
     ) -> HttpResponse:
         """Handle all InvalidTokenErrors."""
         if isinstance(exception, InvalidTokenError):
-            logger.exception("JWT request token error")
-            response = _403(request, exception)
-            if getattr(request, "token", None):
-                request.token.log(request, response, error=exception)
-            return response
-
-
-def _403(request: HttpRequest, exception: Exception) -> HttpResponseForbidden:
-    """Render HttpResponseForbidden for exception."""
-    if FOUR03_TEMPLATE:
-        html = loader.render_to_string(
-            template_name=FOUR03_TEMPLATE,
-            context={"token_error": str(exception), "exception": exception},
-            request=request,
-        )
-        return HttpResponseForbidden(html, reason=str(exception))
-    return HttpResponseForbidden(reason=str(exception))
+            logger.error("JWT request token error", exc_info=sys.exc_info())
+            raise PermissionDenied("Invalid request token.")

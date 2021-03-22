@@ -11,11 +11,11 @@ from django.db import models, transaction
 from django.http import HttpRequest, HttpResponse
 from django.utils.timezone import now as tz_now
 from django.utils.translation import gettext_lazy as _lazy
-from jwt.exceptions import InvalidAudienceError, InvalidTokenError
+from jwt.exceptions import InvalidAudienceError
 
 from .compat import JSONField
 from .exceptions import MaxUseError
-from .settings import DEFAULT_MAX_USES, JWT_SESSION_TOKEN_EXPIRY, LOG_TOKEN_ERRORS
+from .settings import DEFAULT_MAX_USES, JWT_SESSION_TOKEN_EXPIRY
 from .utils import encode, to_seconds
 
 logger = logging.getLogger(__name__)
@@ -302,28 +302,8 @@ class RequestToken(models.Model):
             return self._auth_is_authenticated(request)
 
     @transaction.atomic
-    def log(
-        self,
-        request: HttpRequest,
-        response: HttpResponse,
-        error: Optional[InvalidTokenError] = None,
-    ) -> RequestTokenLog:
-        """
-        Record the use of a token.
-
-        This is used by the decorator to log each time someone uses the token,
-        or tries to. Used for reporting, diagnostics.
-
-        Args:
-            request: the HttpRequest object that used the token, from which the
-                user, ip and user-agenct are extracted.
-            response: the corresponding HttpResponse object, from which the status
-                code is extracted.
-            error: an InvalidTokenError that gets logged as a RequestTokenError.
-
-        Returns a RequestTokenUse object.
-
-        """
+    def log(self, request: HttpRequest, response: HttpResponse) -> RequestTokenLog:
+        """Record the use of a token."""
 
         def rmg(key: str, default: Any = None) -> Any:
             return request.META.get(key, default)
@@ -332,16 +312,12 @@ class RequestToken(models.Model):
             token=self,
             user=None if request.user.is_anonymous else request.user,
             user_agent=rmg("HTTP_USER_AGENT", "unknown"),
-            client_ip=parse_xff(rmg("HTTP_X_FORWARDED_FOR"))
-            or rmg("REMOTE_ADDR", None),
+            client_ip=(
+                parse_xff(rmg("HTTP_X_FORWARDED_FOR")) or rmg("REMOTE_ADDR", None)
+            ),
             status_code=response.status_code,
         ).save()
-        if error and LOG_TOKEN_ERRORS:
-            RequestTokenErrorLog.objects.create_error_log(log, error)
-        # NB this will include all error logs - which means that an error log
-        # may prohibit further use of the token. Is there a scenario in which
-        # this would be the wrong outcome?
-        self.used_to_date = self.logs.filter(error__isnull=True).count()
+        self.used_to_date = self.logs.count()
         self.save()
         return log
 
@@ -426,54 +402,4 @@ class RequestTokenLog(models.Model):
         if "update_fields" not in kwargs:
             self.timestamp = self.timestamp or tz_now()
         super(RequestTokenLog, self).save(*args, **kwargs)
-        return self
-
-
-class RequestTokenErrorLogQuerySet(models.query.QuerySet):
-    def create_error_log(
-        self, log: RequestTokenLog, error: Exception
-    ) -> RequestTokenErrorLog:
-        return RequestTokenErrorLog(
-            token=log.token,
-            log=log,
-            error_type=type(error).__name__,
-            error_message=str(error),
-        )
-
-
-class RequestTokenErrorLog(models.Model):
-    """Used to log errors that occur with the use of a RequestToken."""
-
-    token = models.ForeignKey(
-        RequestToken,
-        related_name="errors",
-        on_delete=models.CASCADE,
-        help_text="The RequestToken that was used.",
-        db_index=True,
-    )
-    log = models.OneToOneField(
-        RequestTokenLog,
-        related_name="error",
-        on_delete=models.CASCADE,
-        help_text="The token use against which the error occurred.",
-        db_index=True,
-    )
-    error_type = models.CharField(
-        max_length=50, help_text="The underlying type of error raised."
-    )
-    error_message = models.CharField(
-        max_length=200, help_text="The error message supplied."
-    )
-
-    objects = RequestTokenErrorLogQuerySet().as_manager()
-
-    class Meta:
-        verbose_name = "Error"
-        verbose_name_plural = "Errors"
-
-    def __str__(self) -> str:
-        return self.error_message
-
-    def save(self, *args: Any, **kwargs: Any) -> RequestTokenErrorLog:
-        super(RequestTokenErrorLog, self).save(*args, **kwargs)
         return self
