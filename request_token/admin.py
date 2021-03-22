@@ -7,7 +7,7 @@ from django.contrib import admin
 from django.utils.safestring import mark_safe
 from django.utils.timezone import now as tz_now
 
-from .models import RequestToken, RequestTokenErrorLog, RequestTokenLog
+from .models import RequestToken, RequestTokenLog
 
 
 def pretty_print(data: Optional[dict]) -> Optional[str]:
@@ -108,5 +108,4 @@ class RequestTokenErrorLogAdmin(admin.ModelAdmin):
 
 
 admin.site.register(RequestToken, RequestTokenAdmin)
-admin.site.register(RequestTokenErrorLog, RequestTokenErrorLogAdmin)
 admin.site.register(RequestTokenLog, RequestTokenLogAdmin)

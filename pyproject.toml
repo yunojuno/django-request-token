@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-request-token"
-version = "0.13"
+version = "0.2.b0"
 description = "JWT-backed Django app for managing querystring tokens."
 license = "MIT"
 authors = ["YunoJuno <code@yunojuno.com>"]
@@ -9,6 +9,7 @@ readme = "README.rst"
 homepage = "https://github.com/yunojuno/django-request-token"
 repository = "https://github.com/yunojuno/django-request-token"
 classifiers = [
+    "Development Status :: 4 - Beta",
     "Environment :: Web Environment",
     "Framework :: Django :: 2.2",
     "Framework :: Django :: 3.0",
@@ -25,7 +26,6 @@ packages = [{ include = "request_token" }]
 python = "^3.7"
 django = "^2.2 || ^3.0"
 pyjwt = "^2.0"
-sqlparse = "*"
 
 [tool.poetry.dev-dependencies]
 tox = "*"
@@ -41,7 +41,7 @@ flake8-docstrings = "*"
 isort = "*"
 mypy = "*"
 pre-commit = "*"
-black = "==19.10b0"
+black = { version="*", allow-prereleases=true }
 
 [build-system]
 requires = ["poetry>=0.12"]

@@ -1,7 +1,7 @@
 import datetime
 from unittest import mock
 
-from django.contrib.auth import get_user_model, logout
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.core.exceptions import ValidationError
@@ -12,13 +12,7 @@ from django.utils.timezone import now as tz_now
 from jwt.exceptions import InvalidAudienceError
 
 from request_token.exceptions import MaxUseError
-from request_token.models import (
-    RequestToken,
-    RequestTokenErrorLog,
-    RequestTokenErrorLogQuerySet,
-    RequestTokenLog,
-    parse_xff,
-)
+from request_token.models import RequestToken, RequestTokenLog, parse_xff
 from request_token.settings import DEFAULT_MAX_USES, JWT_SESSION_TOKEN_EXPIRY
 from request_token.utils import decode, to_seconds
 
@@ -204,15 +198,6 @@ class RequestTokenTests(TestCase):
         token.refresh_from_db(fields=["used_to_date"])
         assertUsedToDate(4)
 
-        with mock.patch.object(
-            RequestTokenErrorLogQuerySet, "create_error_log"
-        ) as mock_log:
-            log = token.log(request, response, MaxUseError("foo"))
-            self.assertEqual(mock_log.call_count, 1)
-            self.assertEqual(log.user_agent, "test_agent")
-            token.refresh_from_db(fields=["used_to_date"])
-            assertUsedToDate(5)
-
     def test_jwt(self):
         token = RequestToken(id=1, scope="foo").save()
         jwt = token.jwt()
@@ -354,23 +339,6 @@ class RequestTokenQuerySetTests(TestCase):
         self.assertRaises(TypeError, RequestToken.objects.create_token)
         RequestToken.objects.create_token(scope="foo")
         self.assertEqual(RequestToken.objects.get().scope, "foo")
-
-
-class RequestTokenErrorLogQuerySetTests(TestCase):
-    def test_create_error_log(self):
-        user = get_user_model().objects.create_user(
-            "zoidberg", first_name=u"∂ƒ©˙∆", last_name=u"†¥¨^"
-        )
-        token = RequestToken.objects.create_token(
-            scope="foo", user=user, login_mode=RequestToken.LOGIN_MODE_REQUEST
-        )
-        log = RequestTokenLog(token=token, user=user).save()
-        elog = RequestTokenErrorLog.objects.create_error_log(log, MaxUseError("foo"))
-        self.assertEqual(elog.token, token)
-        self.assertEqual(elog.log, log)
-        self.assertEqual(elog.error_type, "MaxUseError")
-        self.assertEqual(elog.error_message, "foo")
-        self.assertEqual(str(elog), "foo")
 
 
 class RequestTokenLogTests(TestCase):

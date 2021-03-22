@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2] - 2021-03-22
+
+### Removed
+
+- Logging of token use errors - this has never worked
+- Custom 403_TEMPLATE use (and setting)
+
 ## [0.12] - 2020-08-17
 
 No functional changes - just updating classifiers and CI support.

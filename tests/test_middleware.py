@@ -3,7 +3,7 @@ from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.http import HttpResponse
 from django.test import RequestFactory, TestCase
 from jwt import exceptions
@@ -116,18 +116,18 @@ class MiddlewareTests(TestCase):
         request = self.get_request()
         request.token = self.token
         exception = exceptions.InvalidTokenError("bar")
-        response = self.middleware.process_exception(request, exception)
-        mock_log.assert_called_once_with(request, response, error=exception)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.reason_phrase, str(exception))
+        with self.assertRaises(PermissionDenied):
+            response = self.middleware.process_exception(request, exception)
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(response.reason_phrase, str(exception))
 
         # no request token = no error log
         del request.token
         mock_log.reset_mock()
-        response = self.middleware.process_exception(request, exception)
-        self.assertEqual(mock_log.call_count, 0)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.reason_phrase, str(exception))
+        with self.assertRaises(PermissionDenied):
+            response = self.middleware.process_exception(request, exception)
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(response.reason_phrase, str(exception))
 
         # round it out with a non-token error
         response = self.middleware.process_exception(request, Exception("foo"))
