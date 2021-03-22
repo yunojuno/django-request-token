@@ -4,7 +4,8 @@ from os import getenv
 import django
 
 DJANGO_VERSION = StrictVersion(django.get_version())
-assert DJANGO_VERSION >= StrictVersion("2.2")
+if not DJANGO_VERSION >= StrictVersion("2.2"):
+    raise RuntimeError("Invalid Django version")
 
 DEBUG = True
 
@@ -99,4 +100,5 @@ LOGGING = {
     "loggers": {"request_token": {"handlers": ["console"], "level": "DEBUG"}},
 }
 
-assert DEBUG is True, "This project is only intended to be used for testing."
+if not DEBUG:
+    raise Exception("This project is only intended to be used for testing.")
