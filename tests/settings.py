@@ -13,7 +13,10 @@ try:
     from django.db.models import JSONField  # noqa: F401
 
     DATABASES = {
-        "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": "test.db",}
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": "test.db",
+        }
     }
 except ImportError:
     DATABASES = {

@@ -6,11 +6,11 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('request_token', '0011_update_model_meta_options'),
+        ("request_token", "0011_update_model_meta_options"),
     ]
 
     operations = [
         migrations.DeleteModel(
-            name='RequestTokenErrorLog',
+            name="RequestTokenErrorLog",
         ),
     ]
