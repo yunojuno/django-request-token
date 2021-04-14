@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-import sys
 from typing import Callable
 
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
@@ -92,5 +91,5 @@ class RequestTokenMiddleware:
     ) -> HttpResponse:
         """Handle all InvalidTokenErrors."""
         if isinstance(exception, InvalidTokenError):
-            logger.error("JWT request token error", exc_info=sys.exc_info())
+            logger.exception("JWT request token error, raising 403")
             raise PermissionDenied("Invalid request token.")

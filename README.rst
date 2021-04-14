@@ -1,13 +1,7 @@
-.. image:: https://badge.fury.io/py/django-request-token.svg
-    :target: https://badge.fury.io/py/django-request-token
-
-.. image:: https://travis-ci.org/yunojuno/django-request-token.svg
-    :target: https://travis-ci.org/yunojuno/django-request-token
-
 Supported versions
 ------------------
 
-As of v0.10 this project supports Django 2.2 and above, and Python 3.7/3.8 only on the master branch. For previous verions see the relevant tag / branch.
+As of v0.10 this project supports Django 2.2 and above, and Python 3.7 and above only on the master branch. For previous verions see the relevant tag / branch.
 
 Django Request Token
 --------------------
@@ -15,11 +9,6 @@ Django Request Token
 Django app that uses JWT to manage one-time and expiring tokens to protect URLs.
 
 This app currently requires the use of PostgreSQL.
-
-Compatibility
-=============
-
-This library is now Python3 and Django1.11 and above only.
 
 Background
 ==========
