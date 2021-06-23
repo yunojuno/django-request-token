@@ -193,7 +193,7 @@ class RequestToken(models.Model):
         if self.id is not None:
             claims["jti"] = self.id
         if self.user is not None:
-            claims["aud"] = self.user.id
+            claims["aud"] = str(self.user.pk)
         if self.expiration_time is not None:
             claims["exp"] = to_seconds(self.expiration_time)
         if self.issued_at is not None:
@@ -235,6 +235,17 @@ class RequestToken(models.Model):
     def jwt(self) -> str:
         """Encode the token claims into a JWT."""
         return encode(self.claims)
+
+    def increment_used_count(self) -> None:
+        """
+
+        add 1 (One) to the used_to_date field
+
+        """
+
+        self.used_to_date = self.used_to_date + 1
+        self.save()
+
 
     def validate_max_uses(self) -> None:
         """
