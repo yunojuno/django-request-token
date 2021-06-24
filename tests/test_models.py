@@ -209,7 +209,6 @@ class RequestTokenTests(TestCase):
         token.used_to_date = token.max_uses
         self.assertRaises(MaxUseError, token.validate_max_uses)
 
-
     def test__auth_is_anonymous(self):
         factory = RequestFactory()
         middleware = SessionMiddleware(get_response)
@@ -311,11 +310,10 @@ class RequestTokenTests(TestCase):
         request.user = get_user_model().objects.create_user(username="Hyde")
         self.assertRaises(InvalidAudienceError, token.authenticate, request)
 
-
     def test_increment_used_count(self):
         token = RequestToken(max_uses=1, used_to_date=0)
         token.increment_used_count()
-        self.assertEqual(str(token.used_to_date), '1')
+        self.assertEqual(str(token.used_to_date), "1")
 
     def test_expire(self):
         expiry = tz_now() + datetime.timedelta(days=1)

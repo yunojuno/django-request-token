@@ -237,15 +237,9 @@ class RequestToken(models.Model):
         return encode(self.claims)
 
     def increment_used_count(self) -> None:
-        """
-
-        add 1 (One) to the used_to_date field
-
-        """
-
+        """Add 1 (One) to the used_to_date field."""
         self.used_to_date = self.used_to_date + 1
         self.save()
-
 
     def validate_max_uses(self) -> None:
         """
