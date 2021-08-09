@@ -1,4 +1,5 @@
 import json
+from typing import Any
 from unittest import mock
 
 from django.contrib.auth import get_user_model
@@ -14,7 +15,6 @@ from request_token.settings import JWT_QUERYSTRING_ARG
 
 
 class MockSession(object):
-
     """Fake Session model used to support `session_key` property."""
 
     @property
@@ -23,7 +23,6 @@ class MockSession(object):
 
 
 class MiddlewareTests(TestCase):
-
     """RequestTokenMiddleware tests."""
 
     def setUp(self):
@@ -31,21 +30,22 @@ class MiddlewareTests(TestCase):
         self.factory = RequestFactory()
         self.middleware = RequestTokenMiddleware(get_response=lambda r: HttpResponse())
         self.token = RequestToken.objects.create_token(scope="foo")
+        self.default_payload = {JWT_QUERYSTRING_ARG: self.token.jwt()}
 
     def get_request(self):
-        request = self.factory.get("/?%s=%s" % (JWT_QUERYSTRING_ARG, self.token.jwt()))
+        request = self.factory.get(f"/?{JWT_QUERYSTRING_ARG}={self.token.jwt()}")
         request.user = self.user
         request.session = MockSession()
         return request
 
     def post_request(self):
-        request = self.factory.post("/", {JWT_QUERYSTRING_ARG: self.token.jwt()})
+        request = self.factory.post("/", self.default_payload)
         request.user = self.user
         request.session = MockSession()
         return request
 
-    def post_request_with_JSON(self):
-        data = json.dumps({JWT_QUERYSTRING_ARG: self.token.jwt()})
+    def post_request_with_JSON(self, payload: Any):
+        data = json.dumps(payload)
         request = self.factory.post("/", data, "application/json")
         request.user = self.user
         request.session = MockSession()
@@ -80,9 +80,15 @@ class MiddlewareTests(TestCase):
         self.assertEqual(request.token, self.token)
 
     def test_process_POST_request_with_valid_token_with_json(self):
-        request = self.post_request_with_JSON()
+        request = self.post_request_with_JSON(self.default_payload)
         self.middleware(request)
         self.assertEqual(request.token, self.token)
+
+    def test_process_AJAX_request_with_array(self):
+        """Test for issue #50."""
+        request = self.post_request_with_JSON([1])
+        self.middleware(request)
+        self.assertFalse(hasattr(request, "token"))
 
     def test_process_request_not_allowed(self):
         # PUT requests won't decode the token
@@ -132,3 +138,14 @@ class MiddlewareTests(TestCase):
         # round it out with a non-token error
         response = self.middleware.process_exception(request, Exception("foo"))
         self.assertIsNone(response)
+
+    def test_extract_json_token__array(self):
+        """Test for issue #51."""
+        request = self.post_request_with_JSON(["foo"])
+        middleware = RequestTokenMiddleware(lambda r: HttpResponse())
+        self.assertIsNone(middleware.extract_ajax_token(request))
+
+    def test_extract_json_token(self):
+        request = self.post_request_with_JSON(self.default_payload)
+        middleware = RequestTokenMiddleware(lambda r: HttpResponse())
+        self.assertEqual(middleware.extract_ajax_token(request), self.token.jwt())
