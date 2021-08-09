@@ -194,6 +194,14 @@ following JWT claims (available as the property `RequestToken.claims`:
 * `iat`: (optional) the time the token was issued
 * `ndf`: (optional) the not-before-time of the token
 
+**request_token.models.RequestTokenLog** - stores usage data for tokens
+
+Each time a token is used successfully, a log object is written to the
+database. This provided an audit log of the usage, and it stores client
+IP address and user agent, so can be used to debug issues. This can be
+disabled using the `REQUEST_TOKEN_DISABLE_LOGS` setting. The logs table
+can be maintained using the management command as described below.
+
 **request_token.middleware.RequestTokenMiddleware** - decodes and verifies tokens
 
 The `RequestTokenMiddleware` will look for a querystring token value
@@ -333,11 +341,11 @@ in production with a setting like:
 FOUR03_TEMPLATE = os.path.join(BASE_DIR,'...','403.html')
 ```
 
-### Logging
+* `REQUEST_TOKEN_DISABLE_LOGS`
 
-Debugging middleware and decorators can be complex, so the project is verbose
-in its logging (by design). If you feel it's providing too much logging, you
-can adjust it by setting the standard Django logging for `request_token`.
+Set to `True` to disable the creation of `RequestTokenLog` objects on
+each use of a token. This is not recommended in production, as the
+auditing of token use is a valuable part of the library.
 
 ### Tests
 
