@@ -22,7 +22,6 @@ def get_response(request: HttpRequest) -> HttpResponse:
 
 
 class RequestTokenTests(TestCase):
-
     """RequestToken model property and method tests."""
 
     def setUp(self):
@@ -337,7 +336,6 @@ class RequestTokenTests(TestCase):
 
 
 class RequestTokenQuerySetTests(TestCase):
-
     """RequestTokenQuerySet class tests."""
 
     def test_create_token(self):
@@ -347,7 +345,6 @@ class RequestTokenQuerySetTests(TestCase):
 
 
 class RequestTokenLogTests(TestCase):
-
     """RequestTokenLog model property and method tests."""
 
     def setUp(self):

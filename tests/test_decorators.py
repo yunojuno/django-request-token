@@ -40,7 +40,7 @@ class DecoratorTests(TestCase):
         self.middleware = RequestTokenMiddleware(get_response=lambda r: r)
 
     def _request(self, path, token, user):
-        path = path + "?%s=%s" % (JWT_QUERYSTRING_ARG, token) if token else path
+        path = path + "?{}={}".format(JWT_QUERYSTRING_ARG, token) if token else path
         request = self.factory.get(path)
         request.session = MockSession()
         request.user = user

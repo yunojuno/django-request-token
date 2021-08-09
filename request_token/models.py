@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from django.conf import settings
 from django.contrib.auth import login
@@ -141,34 +141,34 @@ class RequestToken(models.Model):
         return "Request token #%s" % (self.id)
 
     def __repr__(self) -> str:
-        return "<RequestToken id=%s scope=%s login_mode='%s'>" % (
+        return "<RequestToken id={} scope={} login_mode='{}'>".format(
             self.id,
             self.scope,
             self.login_mode,
         )
 
     @property
-    def aud(self) -> Optional[int]:
+    def aud(self) -> int | None:
         """Return 'aud' claim, mapped to user.id."""
         return self.claims.get("aud")
 
     @property
-    def exp(self) -> Optional[datetime.datetime]:
+    def exp(self) -> datetime.datetime | None:
         """Return 'exp' claim, mapped to expiration_time."""
         return self.claims.get("exp")
 
     @property
-    def nbf(self) -> Optional[datetime.datetime]:
+    def nbf(self) -> datetime.datetime | None:
         """Return the 'nbf' claim, mapped to not_before_time."""
         return self.claims.get("nbf")
 
     @property
-    def iat(self) -> Optional[datetime.datetime]:
+    def iat(self) -> datetime.datetime | None:
         """Return the 'iat' claim, mapped to issued_at."""
         return self.claims.get("iat")
 
     @property
-    def jti(self) -> Optional[int]:
+    def jti(self) -> int | None:
         """Return the 'jti' claim, mapped to id."""
         return self.claims.get("jti")
 
@@ -322,7 +322,7 @@ class RequestToken(models.Model):
             ),
             status_code=response.status_code,
         ).save()
-        self.used_to_date = self.logs.count()
+        self.used_to_date = models.F("used_to_date") + 1
         self.save()
         return log
 
@@ -332,7 +332,7 @@ class RequestToken(models.Model):
         self.save()
 
 
-def parse_xff(header_value: str) -> Optional[str]:
+def parse_xff(header_value: str) -> str | None:
     """
     Parse out the X-Forwarded-For request header.
 
@@ -392,12 +392,12 @@ class RequestTokenLog(models.Model):
 
     def __str__(self) -> str:
         if self.user is None:
-            return "%s used %s" % (self.token, self.timestamp)
+            return "{} used {}".format(self.token, self.timestamp)
         else:
-            return "%s used by %s at %s" % (self.token, self.user, self.timestamp)
+            return "{} used by {} at {}".format(self.token, self.user, self.timestamp)
 
     def __repr__(self) -> str:
-        return "<RequestTokenLog id=%s token=%s timestamp='%s'>" % (
+        return "<RequestTokenLog id={} token={} timestamp='{}'>".format(
             self.id,
             self.token.id,
             self.timestamp,

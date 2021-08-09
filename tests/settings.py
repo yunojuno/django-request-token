@@ -70,7 +70,7 @@ TEMPLATES = [
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
-SECRET_KEY = "request_token"
+SECRET_KEY = "request_token"  # noqa: S703,S105
 
 ROOT_URLCONF = "tests.urls"
 

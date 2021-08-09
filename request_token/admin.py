@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from typing import Optional
 
 from django.contrib import admin
 from django.utils.safestring import mark_safe
@@ -10,13 +9,13 @@ from django.utils.timezone import now as tz_now
 from .models import RequestToken, RequestTokenLog
 
 
-def pretty_print(data: Optional[dict]) -> Optional[str]:
+def pretty_print(data: dict | None) -> str | None:
     """Convert dict into formatted HTML."""
     if data is None:
         return None
     pretty = json.dumps(data, sort_keys=True, indent=4, separators=(",", ": "))
     html = pretty.replace(" ", "&nbsp;").replace("\n", "<br>")
-    return mark_safe("<pre><code>%s</code></pre>" % html)
+    return mark_safe("<pre><code>%s</code></pre>" % html)  # noqa: S703,S308
 
 
 class RequestTokenAdmin(admin.ModelAdmin):
@@ -42,17 +41,17 @@ class RequestTokenAdmin(admin.ModelAdmin):
     )
     raw_id_fields = ("user",)
 
-    def _claims(self, obj: RequestToken) -> Optional[str]:
+    def _claims(self, obj: RequestToken) -> str | None:
         return pretty_print(obj.claims)
 
     _claims.short_description = "JWT (decoded)"  # type: ignore
 
-    def _data(self, obj: RequestToken) -> Optional[str]:
+    def _data(self, obj: RequestToken) -> str | None:
         return pretty_print(obj.data)
 
     _data.short_description = "Data (JSON)"  # type: ignore
 
-    def jwt(self, obj: RequestToken) -> Optional[str]:
+    def jwt(self, obj: RequestToken) -> str | None:
         try:
             return obj.jwt()
         except Exception:  # pylint: disable=broad-except
@@ -60,7 +59,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
 
     jwt.short_description = "JWT"  # type: ignore
 
-    def _parsed(self, obj: RequestToken) -> Optional[str]:
+    def _parsed(self, obj: RequestToken) -> str | None:
         try:
             jwt = obj.jwt().split(".")
             return pretty_print(

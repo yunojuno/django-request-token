@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import functools
 import logging
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from django.http import HttpRequest, HttpResponse
 
@@ -11,7 +11,7 @@ from .exceptions import ScopeError, TokenNotFoundError
 logger = logging.getLogger(__name__)
 
 
-def _get_request_arg(*args: Any) -> Optional[HttpRequest]:
+def _get_request_arg(*args: Any) -> HttpRequest | None:
     """Extract the arg that is an HttpRequest object."""
     for arg in args:
         if isinstance(arg, HttpRequest):
@@ -20,8 +20,8 @@ def _get_request_arg(*args: Any) -> Optional[HttpRequest]:
 
 
 def use_request_token(
-    view_func: Optional[Callable] = None,
-    scope: Optional[str] = None,
+    view_func: Callable | None = None,
+    scope: str | None = None,
     required: bool = False,
 ) -> Callable:
     """
@@ -81,7 +81,7 @@ def use_request_token(
             return response
 
         raise ScopeError(
-            "RequestToken scope mismatch: '%s' != '%s'" % (token.scope, scope)
+            "RequestToken scope mismatch: '{}' != '{}'".format(token.scope, scope)
         )
 
     return inner
