@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "django-request-token"
-version = "0.14"
+version = "0.15.b0"
 description = "JWT-backed Django app for managing querystring tokens."
 license = "MIT"
 authors = ["YunoJuno <code@yunojuno.com>"]
 maintainers = ["YunoJuno <code@yunojuno.com>"]
-readme = "README.rst"
+readme = "README.md"
 homepage = "https://github.com/yunojuno/django-request-token"
 repository = "https://github.com/yunojuno/django-request-token"
 classifiers = [
