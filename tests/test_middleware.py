@@ -117,8 +117,7 @@ class MiddlewareTests(TestCase):
         self.assertIsNone(request.token)
         self.assertEqual(mock_logger.exception.call_count, 1)
 
-    @mock.patch.object(RequestToken, "log")
-    def test_process_exception(self, mock_log):
+    def test_process_exception(self):
         request = self.get_request()
         request.token = self.token
         exception = exceptions.InvalidTokenError("bar")
@@ -129,7 +128,6 @@ class MiddlewareTests(TestCase):
 
         # no request token = no error log
         del request.token
-        mock_log.reset_mock()
         with self.assertRaises(PermissionDenied):
             response = self.middleware.process_exception(request, exception)
             self.assertEqual(response.status_code, 403)

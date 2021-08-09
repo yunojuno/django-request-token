@@ -7,3 +7,6 @@ JWT_QUERYSTRING_ARG: str = getattr(settings, "REQUEST_TOKEN_QUERYSTRING", "rt")
 JWT_SESSION_TOKEN_EXPIRY: int = getattr(settings, "REQUEST_TOKEN_EXPIRY", 10)
 
 DEFAULT_MAX_USES: int = getattr(settings, "REQUEST_TOKEN_DEFAULT_MAX_USES", 10)
+
+# if True then the RequestTokenLog creation is disabled.
+DISABLE_LOGS: bool = getattr(settings, "REQUEST_TOKEN_DISABLE_LOGS", False)

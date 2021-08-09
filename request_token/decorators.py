@@ -6,6 +6,8 @@ from typing import Any, Callable
 
 from django.http import HttpRequest, HttpResponse
 
+from request_token.commands import log_token_use
+
 from .exceptions import ScopeError, TokenNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -72,12 +74,12 @@ def use_request_token(
         if token.scope == scope:
             token.validate_max_uses()
             token.authenticate(request)
-            response = view_func(*args, **kwargs)
+            response: HttpResponse = view_func(*args, **kwargs)
             # this will only log the request here if the view function
             # returns a valid HttpResponse object - if the view function
             # raises an error, **or this decorator raises an error**, it
             # will be handled in the middleware process_exception function,
-            token.log(request, response)
+            log_token_use(token, request, response.status_code)
             return response
 
         raise ScopeError(

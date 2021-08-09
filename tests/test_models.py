@@ -12,7 +12,7 @@ from django.utils.timezone import now as tz_now
 from jwt.exceptions import InvalidAudienceError
 
 from request_token.exceptions import MaxUseError
-from request_token.models import RequestToken, RequestTokenLog, parse_xff
+from request_token.models import RequestToken, RequestTokenLog
 from request_token.settings import DEFAULT_MAX_USES, JWT_SESSION_TOKEN_EXPIRY
 from request_token.utils import decode, to_seconds
 
@@ -160,43 +160,6 @@ class RequestTokenTests(TestCase):
         token.expiration_time = None
         assertValidationFails("expiration_time")
 
-    def test_log(self):
-        token = RequestToken().save()
-        factory = RequestFactory()
-        request = factory.get("/")
-        request.user = AnonymousUser()
-        request.META = {}
-        response = HttpResponse("foo", status=123)
-
-        def assertUsedToDate(expected):
-            token.refresh_from_db(fields=["used_to_date"])
-            self.assertEqual(token.used_to_date, expected)
-
-        log = token.log(request, response)
-        self.assertEqual(RequestTokenLog.objects.get(), log)
-        self.assertEqual(log.user, None)
-        self.assertEqual(log.token, token)
-        self.assertEqual(log.user_agent, "unknown")
-        self.assertEqual(log.client_ip, None)
-        self.assertEqual(log.status_code, 123)
-        assertUsedToDate(1)
-
-        request.META["REMOTE_ADDR"] = "192.168.0.1"
-        log = token.log(request, response)
-        self.assertEqual(log.client_ip, "192.168.0.1")
-        assertUsedToDate(2)
-
-        request.META["HTTP_X_FORWARDED_FOR"] = "192.168.0.2"
-        log = token.log(request, response)
-        self.assertEqual(log.client_ip, "192.168.0.2")
-        assertUsedToDate(3)
-
-        request.META["HTTP_USER_AGENT"] = "test_agent"
-        log = token.log(request, response)
-        self.assertEqual(log.user_agent, "test_agent")
-        token.refresh_from_db(fields=["used_to_date"])
-        assertUsedToDate(4)
-
     def test_jwt(self):
         token = RequestToken(id=1, scope="foo").save()
         jwt = token.jwt()
@@ -310,7 +273,7 @@ class RequestTokenTests(TestCase):
         self.assertRaises(InvalidAudienceError, token.authenticate, request)
 
     def test_increment_used_count(self):
-        token = RequestToken(max_uses=1, used_to_date=0)
+        token = RequestToken.objects.create(max_uses=1, used_to_date=0)
         token.increment_used_count()
         self.assertEqual(str(token.used_to_date), "1")
 
@@ -322,17 +285,6 @@ class RequestTokenTests(TestCase):
         self.assertTrue(token.expiration_time == expiry)
         token.expire()
         self.assertTrue(token.expiration_time < expiry)
-
-    def test_parse_xff(self):
-        def assertMeta(meta, expected):
-            self.assertEqual(parse_xff(meta), expected)
-
-        assertMeta(None, None)
-        assertMeta("", "")
-        assertMeta("foo", "foo")
-        assertMeta("foo, bar, baz", "foo")
-        assertMeta("foo , bar, baz", "foo")
-        assertMeta("8.8.8.8, 123.124.125.126", "8.8.8.8")
 
 
 class RequestTokenQuerySetTests(TestCase):

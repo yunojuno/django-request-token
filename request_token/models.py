@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.auth import login
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest
 from django.utils.timezone import now as tz_now
 from django.utils.translation import gettext_lazy as _lazy
 from jwt.exceptions import InvalidAudienceError
@@ -236,10 +236,15 @@ class RequestToken(models.Model):
         """Encode the token claims into a JWT."""
         return encode(self.claims)
 
+    @transaction.atomic
     def increment_used_count(self) -> None:
         """Add 1 (One) to the used_to_date field."""
-        self.used_to_date = self.used_to_date + 1
+        self.used_to_date = models.F("used_to_date") + 1
         self.save()
+        # refresh to clear out the F expression, otherwise we risk
+        # continuing to update the field.
+        # https://docs.djangoproject.com/en/3.2/ref/models/expressions/
+        self.refresh_from_db()
 
     def validate_max_uses(self) -> None:
         """
@@ -306,49 +311,10 @@ class RequestToken(models.Model):
         else:
             return self._auth_is_authenticated(request)
 
-    @transaction.atomic
-    def log(self, request: HttpRequest, response: HttpResponse) -> RequestTokenLog:
-        """Record the use of a token."""
-
-        def rmg(key: str, default: Any = None) -> Any:
-            return request.META.get(key, default)
-
-        log = RequestTokenLog(
-            token=self,
-            user=None if request.user.is_anonymous else request.user,
-            user_agent=rmg("HTTP_USER_AGENT", "unknown"),
-            client_ip=(
-                parse_xff(rmg("HTTP_X_FORWARDED_FOR")) or rmg("REMOTE_ADDR", None)
-            ),
-            status_code=response.status_code,
-        ).save()
-        self.used_to_date = models.F("used_to_date") + 1
-        self.save()
-        return log
-
     def expire(self) -> None:
         """Mark the token as expired immediately, effectively killing the token."""
         self.expiration_time = tz_now() - datetime.timedelta(microseconds=1)
         self.save()
-
-
-def parse_xff(header_value: str) -> str | None:
-    """
-    Parse out the X-Forwarded-For request header.
-
-    This handles the bug that blows up when multiple IP addresses are
-    specified in the header. The docs state that the header contains
-    "The originating IP address", but in reality it contains a list
-    of all the intermediate addresses. The first item is the original
-    client, and then any intermediate proxy IPs. We want the original.
-
-    Returns the first IP in the list, else None.
-
-    """
-    try:
-        return header_value.split(",")[0].strip()
-    except (KeyError, AttributeError):
-        return None
 
 
 class RequestTokenLog(models.Model):
