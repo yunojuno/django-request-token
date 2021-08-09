@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import datetime
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from django.conf import settings
 from django.contrib.auth import login
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest
 from django.utils.timezone import now as tz_now
 from django.utils.translation import gettext_lazy as _lazy
 from jwt.exceptions import InvalidAudienceError
@@ -141,34 +141,34 @@ class RequestToken(models.Model):
         return "Request token #%s" % (self.id)
 
     def __repr__(self) -> str:
-        return "<RequestToken id=%s scope=%s login_mode='%s'>" % (
+        return "<RequestToken id={} scope={} login_mode='{}'>".format(
             self.id,
             self.scope,
             self.login_mode,
         )
 
     @property
-    def aud(self) -> Optional[int]:
+    def aud(self) -> int | None:
         """Return 'aud' claim, mapped to user.id."""
         return self.claims.get("aud")
 
     @property
-    def exp(self) -> Optional[datetime.datetime]:
+    def exp(self) -> datetime.datetime | None:
         """Return 'exp' claim, mapped to expiration_time."""
         return self.claims.get("exp")
 
     @property
-    def nbf(self) -> Optional[datetime.datetime]:
+    def nbf(self) -> datetime.datetime | None:
         """Return the 'nbf' claim, mapped to not_before_time."""
         return self.claims.get("nbf")
 
     @property
-    def iat(self) -> Optional[datetime.datetime]:
+    def iat(self) -> datetime.datetime | None:
         """Return the 'iat' claim, mapped to issued_at."""
         return self.claims.get("iat")
 
     @property
-    def jti(self) -> Optional[int]:
+    def jti(self) -> int | None:
         """Return the 'jti' claim, mapped to id."""
         return self.claims.get("jti")
 
@@ -236,10 +236,15 @@ class RequestToken(models.Model):
         """Encode the token claims into a JWT."""
         return encode(self.claims)
 
+    @transaction.atomic
     def increment_used_count(self) -> None:
         """Add 1 (One) to the used_to_date field."""
-        self.used_to_date = self.used_to_date + 1
+        self.used_to_date = models.F("used_to_date") + 1
         self.save()
+        # refresh to clear out the F expression, otherwise we risk
+        # continuing to update the field.
+        # https://docs.djangoproject.com/en/3.2/ref/models/expressions/
+        self.refresh_from_db()
 
     def validate_max_uses(self) -> None:
         """
@@ -306,49 +311,10 @@ class RequestToken(models.Model):
         else:
             return self._auth_is_authenticated(request)
 
-    @transaction.atomic
-    def log(self, request: HttpRequest, response: HttpResponse) -> RequestTokenLog:
-        """Record the use of a token."""
-
-        def rmg(key: str, default: Any = None) -> Any:
-            return request.META.get(key, default)
-
-        log = RequestTokenLog(
-            token=self,
-            user=None if request.user.is_anonymous else request.user,
-            user_agent=rmg("HTTP_USER_AGENT", "unknown"),
-            client_ip=(
-                parse_xff(rmg("HTTP_X_FORWARDED_FOR")) or rmg("REMOTE_ADDR", None)
-            ),
-            status_code=response.status_code,
-        ).save()
-        self.used_to_date = self.logs.count()
-        self.save()
-        return log
-
     def expire(self) -> None:
         """Mark the token as expired immediately, effectively killing the token."""
         self.expiration_time = tz_now() - datetime.timedelta(microseconds=1)
         self.save()
-
-
-def parse_xff(header_value: str) -> Optional[str]:
-    """
-    Parse out the X-Forwarded-For request header.
-
-    This handles the bug that blows up when multiple IP addresses are
-    specified in the header. The docs state that the header contains
-    "The originating IP address", but in reality it contains a list
-    of all the intermediate addresses. The first item is the original
-    client, and then any intermediate proxy IPs. We want the original.
-
-    Returns the first IP in the list, else None.
-
-    """
-    try:
-        return header_value.split(",")[0].strip()
-    except (KeyError, AttributeError):
-        return None
 
 
 class RequestTokenLog(models.Model):
@@ -392,12 +358,12 @@ class RequestTokenLog(models.Model):
 
     def __str__(self) -> str:
         if self.user is None:
-            return "%s used %s" % (self.token, self.timestamp)
+            return "{} used {}".format(self.token, self.timestamp)
         else:
-            return "%s used by %s at %s" % (self.token, self.user, self.timestamp)
+            return "{} used by {} at {}".format(self.token, self.user, self.timestamp)
 
     def __repr__(self) -> str:
-        return "<RequestTokenLog id=%s token=%s timestamp='%s'>" % (
+        return "<RequestTokenLog id={} token={} timestamp='{}'>".format(
             self.id,
             self.token.id,
             self.timestamp,

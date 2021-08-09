@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import calendar
 import datetime
-from typing import Dict, List, Optional, Sequence
+from typing import Sequence
 
 from django.conf import settings
 from jwt import decode as jwt_decode
@@ -43,9 +43,9 @@ def encode(payload: dict, check_claims: Sequence[str] = MANDATORY_CLAIMS) -> str
 
 def decode(
     token: str,
-    options: Optional[Dict[str, bool]] = None,
-    check_claims: Optional[Sequence[str]] = None,
-    algorithms: Optional[List[str]] = None,
+    options: dict[str, bool] | None = None,
+    check_claims: Sequence[str] | None = None,
+    algorithms: list[str] | None = None,
 ) -> dict:
     """Decode JWT payload and check for 'jti', 'sub' claims."""
     if not options:
@@ -62,7 +62,7 @@ def decode(
     return decoded
 
 
-def to_seconds(timestamp: datetime.datetime) -> Optional[int]:
+def to_seconds(timestamp: datetime.datetime) -> int | None:
     """Convert timestamp into integers since epoch."""
     try:
         return calendar.timegm(timestamp.utctimetuple())

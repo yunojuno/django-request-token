@@ -14,13 +14,13 @@ def get_url(url_name, token):
     """Helper to format urls with tokens."""
     url = reverse("test_app:%s" % url_name)
     if token:
-        url += "?%s=%s" % (JWT_QUERYSTRING_ARG, token.jwt())
+        url += "?{}={}".format(JWT_QUERYSTRING_ARG, token.jwt())
     return url
 
 
 class ViewTests(TransactionTestCase):
-
-    """Test the end-to-end use of tokens.
+    """
+    Test the end-to-end use of tokens.
 
     These tests specifically confirm the way in which request and session tokens
     deal with repeated requests.

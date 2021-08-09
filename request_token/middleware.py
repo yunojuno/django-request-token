@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Callable, Optional
+from typing import Callable
 
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.http.request import HttpRequest
@@ -28,7 +28,7 @@ class RequestTokenMiddleware:
     def __init__(self, get_response: Callable):
         self.get_response = get_response
 
-    def extract_ajax_token(self, request: HttpRequest) -> Optional[str]:
+    def extract_ajax_token(self, request: HttpRequest) -> str | None:
         """Extract token from AJAX request."""
         try:
             payload = json.loads(request.body)

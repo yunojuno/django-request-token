@@ -10,7 +10,6 @@ from request_token.models import RequestToken
 
 
 class AdminTests(TestCase):
-
     """Admin function tests."""
 
     def test_pretty_print(self):
@@ -22,7 +21,6 @@ class AdminTests(TestCase):
 
 
 class RequestTokenAdminTests(TestCase):
-
     """RequestTokenAdmin class tests."""
 
     @mock.patch("request_token.models.tz_now")
