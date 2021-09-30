@@ -54,7 +54,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
     def jwt(self, obj: RequestToken) -> str | None:
         try:
             return obj.jwt()
-        except Exception:  # pylint: disable=broad-except
+        except Exception:  # noqa: B902
             return None
 
     jwt.short_description = "JWT"  # type: ignore
@@ -65,7 +65,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
             return pretty_print(
                 {"header": jwt[0], "claims": jwt[1], "signature": jwt[2]}
             )
-        except Exception:  # pylint: disable=broad-except
+        except Exception:  # noqa: B902
             return None
 
     _parsed.short_description = "JWT (parsed)"  # type: ignore

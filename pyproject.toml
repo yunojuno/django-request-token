@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-request-token"
-version = "0.16"
+version = "0.16.1"
 description = "JWT-backed Django app for managing querystring tokens."
 license = "MIT"
 authors = ["YunoJuno <code@yunojuno.com>"]
@@ -25,24 +25,26 @@ packages = [{ include = "request_token" }]
 
 [tool.poetry.dependencies]
 python = "^3.7"
-django = "^2.2 || ^3.0"
+django = "^2.2 || ^3.0 || ^4.0"
 pyjwt = "^2.0"
 
 [tool.poetry.dev-dependencies]
-tox = "*"
-pytest = "*"
-pytest-cov = "*"
-pytest-django = "*"
+black = {version = "*", allow-prereleases = true}
 coverage = "*"
-pylint = "*"
-pylint-django = "*"
 flake8 = "*"
 flake8-bandit = "*"
+flake8-blind-except = "*"
 flake8-docstrings = "*"
+flake8-logging-format = "*"
+flake8-print = "*"
+freezegun = "*"
 isort = "*"
 mypy = "*"
 pre-commit = "*"
-black = { version="*", allow-prereleases=true }
+pytest = "*"
+pytest-cov = "*"
+pytest-django = "*"
+tox = "*"
 
 [build-system]
 requires = ["poetry>=0.12"]
