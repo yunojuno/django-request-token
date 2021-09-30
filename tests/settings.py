@@ -1,11 +1,4 @@
-from distutils.version import StrictVersion
 from os import getenv
-
-import django
-
-DJANGO_VERSION = StrictVersion(django.get_version())
-if not DJANGO_VERSION >= StrictVersion("2.2"):
-    raise RuntimeError("Invalid Django version")
 
 DEBUG = True
 
