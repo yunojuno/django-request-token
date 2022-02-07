@@ -4,8 +4,6 @@ from __future__ import unicode_literals
 
 from django.db import migrations, models
 
-from ..compat import JSONField
-
 
 class Migration(migrations.Migration):
 
@@ -15,7 +13,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="requesttoken",
             name="data",
-            field=JSONField(
+            field=models.JSONField(
                 blank=True,
                 default=dict,
                 help_text="Custom data add to the token, but not encoded (must be fetched from DB).",

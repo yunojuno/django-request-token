@@ -1,8 +1,7 @@
 ## Supported versions
 
-As of v0.10 this project supports Django 2.2 and above, and Python 3.7
-and above only on the master branch. For previous verions see the
-relevant tag / branch.
+This project supports Django 3.1+ and Python 3.7+. The latest version
+supported is Django 4.0 running on Python 3.10.
 
 ## Django Request Token
 

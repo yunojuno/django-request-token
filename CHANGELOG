@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0] - 2022-02-07
+
+- Add Django 4.0 and Python 3.10 support
+- Add `RequestToken.tokenise` method
+
 ## [0.15] - 2021-06-24
 
 - Add support for non-default user PK fields (e.g. uuid) - thanks @timomeara
