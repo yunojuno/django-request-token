@@ -1,6 +1,7 @@
 import datetime
 from unittest import mock
 
+import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.sessions.middleware import SessionMiddleware
@@ -27,7 +28,7 @@ class RequestTokenTests(TestCase):
     def setUp(self):
         # ensure user has unicode chars
         self.user = get_user_model().objects.create_user(
-            "zoidberg", first_name=u"ß∂ƒ©˙∆", last_name=u"ƒ∆"
+            "zoidberg", first_name="ß∂ƒ©˙∆", last_name="ƒ∆"
         )
 
     def test_defaults(self):
@@ -287,6 +288,20 @@ class RequestTokenTests(TestCase):
         self.assertTrue(token.expiration_time < expiry)
 
 
+@pytest.mark.parametrize(
+    "input,output",
+    [
+        ("/foo", "/foo?rt={jwt}"),
+        ("/foo?rt=baz", "/foo?rt={jwt}"),
+        ("/foo?rt=baz&q=hello", "/foo?rt={jwt}&q=hello"),
+        ("/foo?rt=baz&q=hello#anchor", "/foo?rt={jwt}&q=hello#anchor"),
+    ],
+)
+def test_tokenise(input: str, output: str) -> None:
+    token = RequestToken(id=1, scope="foo", login_mode=RequestToken.LOGIN_MODE_NONE)
+    assert token.tokenise(input) == output.format(jwt=token.jwt())
+
+
 class RequestTokenQuerySetTests(TestCase):
     """RequestTokenQuerySet class tests."""
 
@@ -301,7 +316,7 @@ class RequestTokenLogTests(TestCase):
 
     def setUp(self):
         self.user = get_user_model().objects.create_user(
-            "zoidberg", first_name=u"∂ƒ©˙∆", last_name=u"†¥¨^"
+            "zoidberg", first_name="∂ƒ©˙∆", last_name="†¥¨^"
         )
         self.token = RequestToken.objects.create_token(
             scope="foo", user=self.user, login_mode=RequestToken.LOGIN_MODE_REQUEST

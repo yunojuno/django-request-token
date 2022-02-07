@@ -3,19 +3,20 @@ from __future__ import annotations
 import datetime
 import logging
 from typing import Any
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from django.conf import settings
 from django.contrib.auth import login
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.db.models import JSONField
 from django.http import HttpRequest
 from django.utils.timezone import now as tz_now
 from django.utils.translation import gettext_lazy as _lazy
 from jwt.exceptions import InvalidAudienceError
 
-from .compat import JSONField
 from .exceptions import MaxUseError
-from .settings import DEFAULT_MAX_USES, JWT_SESSION_TOKEN_EXPIRY
+from .settings import DEFAULT_MAX_USES, JWT_QUERYSTRING_ARG, JWT_SESSION_TOKEN_EXPIRY
 from .utils import encode, to_seconds
 
 logger = logging.getLogger(__name__)
@@ -315,6 +316,23 @@ class RequestToken(models.Model):
         """Mark the token as expired immediately, effectively killing the token."""
         self.expiration_time = tz_now() - datetime.timedelta(microseconds=1)
         self.save()
+
+    def tokenise(self, url: str) -> str:
+        """Add token to a base URL."""
+        parts = urlparse(url)
+        qs = parse_qs(parts.query)
+        # https://docs.python.org/3/library/urllib.parse.html#urllib.parse.parse_qs
+        # parse_qs response is a dict[str, list[str]] - we want to replace it.
+        qs[JWT_QUERYSTRING_ARG] = [self.jwt()]
+        new_parts = (
+            parts.scheme,
+            parts.netloc,
+            parts.path,
+            parts.params,
+            urlencode(qs, doseq=True),
+            parts.fragment,
+        )
+        return urlunparse(new_parts)
 
 
 class RequestTokenLog(models.Model):
