@@ -1,7 +1,9 @@
-*.pyc
-*.egg-info
 .coverage
 .tox
+*.db
+*.egg-info
+*.pyc
+dist
 poetry.lock
 static
 test.db

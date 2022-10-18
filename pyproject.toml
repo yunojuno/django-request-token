@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-request-token"
-version = "1.0"
+version = "2.0"
 description = "JWT-backed Django app for managing querystring tokens."
 license = "MIT"
 authors = ["YunoJuno <code@yunojuno.com>"]
@@ -11,12 +11,11 @@ repository = "https://github.com/yunojuno/django-request-token"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Web Environment",
-    "Framework :: Django :: 3.1",
     "Framework :: Django :: 3.2",
     "Framework :: Django :: 4.0",
+    "Framework :: Django :: 4.1",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -24,12 +23,12 @@ classifiers = [
 packages = [{ include = "request_token" }]
 
 [tool.poetry.dependencies]
-python = "^3.7"
-django = "^2.2 || ^3.0 || ^4.0"
+python = "^3.8"
+django = "^3.2 || ^4.0"
 pyjwt = "^2.0"
 
 [tool.poetry.dev-dependencies]
-black = {version = "*", allow-prereleases = true}
+black = "*"
 coverage = "*"
 flake8 = "*"
 flake8-bandit = "*"

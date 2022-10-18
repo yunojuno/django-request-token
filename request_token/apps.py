@@ -8,3 +8,4 @@ class RequestTokenAppConfig(AppConfig):
 
     name = "request_token"
     verbose_name = "JWT Request Tokens"
+    default_auto_field = "django.db.models.AutoField"

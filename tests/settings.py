@@ -3,7 +3,7 @@ DEBUG = True
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": "test.db",
+        "NAME": "django_request_token.db",
     }
 }
 
