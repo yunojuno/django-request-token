@@ -6,9 +6,9 @@ from typing import Any, Callable
 
 from django.http import HttpRequest, HttpResponse
 
-from request_token.commands import log_token_use
-
+from .commands import log_token_use
 from .exceptions import ScopeError, TokenNotFoundError
+from .models import RequestToken
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +21,11 @@ def _get_request_arg(*args: Any) -> HttpRequest | None:
     return None
 
 
-def use_request_token(
+def use_request_token(  # noqa: C901
     view_func: Callable | None = None,
     scope: str | None = None,
     required: bool = False,
+    log: bool = True,
 ) -> Callable:
     """
     Decorate view functions that supports RequestTokens.
@@ -42,6 +43,8 @@ def use_request_token(
     in all cases - and the decorator will raise TokenNotFoundError if one does
     not exist.
 
+    If the 'log' kwargs is False then the usage is not logged.
+
     Errors are trapped and returned as HttpResponseForbidden responses, with
     the original error as the `response.error` property.
 
@@ -53,7 +56,9 @@ def use_request_token(
         raise ValueError("Decorator scope cannot be empty.")
 
     if view_func is None:
-        return functools.partial(use_request_token, scope=scope, required=required)
+        return functools.partial(
+            use_request_token, scope=scope, required=required, log=log
+        )
 
     @functools.wraps(view_func)
     def inner(*args: Any, **kwargs: Any) -> HttpResponse:
@@ -62,7 +67,7 @@ def use_request_token(
         # with functions and methods we need to determine where the request
         # arg is.
         request = _get_request_arg(*args)
-        token = getattr(request, "token", None)
+        token: RequestToken | None = getattr(request, "token", None)
         if not view_func:
             raise ValueError("Missing view_func")
 
@@ -71,19 +76,20 @@ def use_request_token(
                 raise TokenNotFoundError()
             return view_func(*args, **kwargs)
 
-        if token.scope == scope:
-            token.validate_max_uses()
-            token.authenticate(request)
-            response: HttpResponse = view_func(*args, **kwargs)
-            # this will only log the request here if the view function
-            # returns a valid HttpResponse object - if the view function
-            # raises an error, **or this decorator raises an error**, it
-            # will be handled in the middleware process_exception function,
-            log_token_use(token, request, response.status_code)
-            return response
+        if token.scope != scope:
+            raise ScopeError(
+                "RequestToken scope mismatch: '{}' != '{}'".format(token.scope, scope)
+            )
 
-        raise ScopeError(
-            "RequestToken scope mismatch: '{}' != '{}'".format(token.scope, scope)
-        )
+        token.validate_max_uses()
+        token.authenticate(request)
+        response: HttpResponse = view_func(*args, **kwargs)
+        # this will only log the request here if the view function
+        # returns a valid HttpResponse object - if the view function
+        # raises an error, **or this decorator raises an error**, it
+        # will be handled in the middleware process_exception function,
+        if log:
+            log_token_use(token, request, response.status_code)
+        return response
 
     return inner
