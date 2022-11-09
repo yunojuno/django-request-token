@@ -1,7 +1,7 @@
 ## Supported versions
 
-This project supports Django 3.1+ and Python 3.7+. The latest version
-supported is Django 4.0 running on Python 3.10.
+This project supports Django 3.2+ and Python 3.8+. The latest version
+supported is Django 4.1 running on Python 3.11.
 
 ## Django Request Token
 
@@ -15,7 +15,7 @@ This app currently requires the use of PostgreSQL.
 This project was borne out of our experiences at YunoJuno with 'expiring
 links' - which is a common use case of providing users with a URL that
 performs a single action, and may bypass standard authentication. A
-well-known use of of this is the ubiquitous 'unsubscribe' link you find
+well-known use of this is the ubiquitous 'unsubscribe' link you find
 at the bottom of newsletters. You click on the link and it immediately
 unsubscribes you, irrespective of whether you are already authenticated
 or not.

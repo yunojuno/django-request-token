@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1] - 2022-11-09
+
+- Add Python 3.11 support
+
 ## [1.0] - 2022-02-07
 
 - Add Django 4.0 and Python 3.10 support
