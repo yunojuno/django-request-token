@@ -230,7 +230,7 @@ class RequestToken(models.Model):
                     + datetime.timedelta(minutes=JWT_SESSION_TOKEN_EXPIRY)
                 )
         self.clean()
-        super(RequestToken, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
         return self
 
     def jwt(self) -> str:
@@ -390,5 +390,5 @@ class RequestTokenLog(models.Model):
     def save(self, *args: Any, **kwargs: Any) -> RequestToken:
         if "update_fields" not in kwargs:
             self.timestamp = self.timestamp or tz_now()
-        super(RequestTokenLog, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
         return self

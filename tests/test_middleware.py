@@ -14,7 +14,7 @@ from request_token.models import RequestToken
 from request_token.settings import JWT_QUERYSTRING_ARG
 
 
-class MockSession(object):
+class MockSession:
     """Fake Session model used to support `session_key` property."""
 
     @property

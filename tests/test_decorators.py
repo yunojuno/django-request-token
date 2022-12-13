@@ -1,4 +1,4 @@
-from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth.models import AnonymousUser, User
 from django.http import HttpRequest, HttpResponse
 from django.test import RequestFactory, TestCase
 
@@ -16,7 +16,7 @@ def test_view_func(request):
     return response
 
 
-class TestClassBasedView(object):
+class TestClassBasedView:
     @use_request_token(scope="foobar")
     def get(self, request):
         """Return decorated request / response objects."""
@@ -24,7 +24,7 @@ class TestClassBasedView(object):
         return response
 
 
-class MockSession(object):
+class MockSession:
     """Fake Session model used to support `session_key` property."""
 
     @property
@@ -89,3 +89,30 @@ class DecoratorTests(TestCase):
         self.assertEqual(_get_request_arg(request), request)
         self.assertEqual(_get_request_arg(request, cbv), request)
         self.assertEqual(_get_request_arg(cbv, request), request)
+
+    def test_delete_user__pass(self):
+        user = User.objects.create_user("test_user")
+        token = RequestToken.objects.create_token(user=user, scope="foo")
+        request = self._request("/", token.jwt(), user)
+        assert User.objects.count() == 1
+
+        @use_request_token(scope="foo", log=False)
+        def delete_token_user_pass(request):
+            request.user.delete()
+            return HttpResponse("Hello, world!", status=204)
+
+        response = delete_token_user_pass(request)
+        assert response.status_code == 204
+        assert User.objects.count() == 0
+
+    def test_delete_user__fail(self):
+        user = User.objects.create_user("test_user")
+        token = RequestToken.objects.create_token(user=user, scope="foo")
+        request = self._request("/", token.jwt(), user)
+
+        @use_request_token(scope="foo", log=True)
+        def delete_token_user(request):
+            request.user.delete()
+            return HttpResponse("Hello, world!", status=204)
+
+        self.assertRaises(ValueError, delete_token_user, request)
