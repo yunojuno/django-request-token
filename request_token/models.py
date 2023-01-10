@@ -94,6 +94,9 @@ class RequestToken(models.Model):
         max_length=100,
         help_text=_lazy("Label used to match request to view function in decorator."),
     )
+    token = models.TextField(
+        help_text=_lazy("The encoded JWT token, set on save.")
+    )
     expiration_time = models.DateTimeField(
         blank=True,
         null=True,
@@ -230,11 +233,19 @@ class RequestToken(models.Model):
                     + datetime.timedelta(minutes=JWT_SESSION_TOKEN_EXPIRY)
                 )
         self.clean()
+        self.token = self.jwt()
         super().save(*args, **kwargs)
         return self
 
     def jwt(self) -> str:
-        """Encode the token claims into a JWT."""
+        """
+        Calculate the JWT itself from the object claims attr.
+
+        This method has been deprecated in favour of storing the
+        computed token on the model, so that it can be used more easily
+        (e.g. via the ORM).
+
+        """
         return encode(self.claims)
 
     @transaction.atomic

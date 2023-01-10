@@ -31,45 +31,42 @@ class RequestTokenAdmin(admin.ModelAdmin):
         "issued_at",
         "is_valid",
     )
-    readonly_fields = ("issued_at", "jwt", "_parsed", "_claims", "_data")
+    readonly_fields = (
+        "issued_at",
+        "token",
+        "_parsed",
+        "_claims",
+        "_data",
+    )
     search_fields = (
         "user__first_name",
         "user__last_name",
         "user__email",
         "user__username",
         "scope",
+        "token"
     )
     raw_id_fields = ("user",)
 
+    @admin.display(description="JWT (decoded)")
     def _claims(self, obj: RequestToken) -> str | None:
         return pretty_print(obj.claims)
 
-    _claims.short_description = "JWT (decoded)"  # type: ignore
-
+    @admin.display(description="Data (JSON)")
     def _data(self, obj: RequestToken) -> str | None:
         return pretty_print(obj.data)
 
-    _data.short_description = "Data (JSON)"  # type: ignore
-
-    def jwt(self, obj: RequestToken) -> str | None:
-        try:
-            return obj.jwt()
-        except Exception:  # noqa: B902
-            return None
-
-    jwt.short_description = "JWT"  # type: ignore
-
+    @admin.display(description="JWT (parsed)")
     def _parsed(self, obj: RequestToken) -> str | None:
         try:
-            jwt = obj.jwt().split(".")
+            jwt = obj.token.split(".")
             return pretty_print(
                 {"header": jwt[0], "claims": jwt[1], "signature": jwt[2]}
             )
         except Exception:  # noqa: B902
             return None
 
-    _parsed.short_description = "JWT (parsed)"  # type: ignore
-
+    @admin.display(boolean=True)
     def is_valid(self, obj: RequestToken) -> bool:
         """Validate the time window and usage."""
         now = tz_now()
@@ -80,8 +77,6 @@ class RequestTokenAdmin(admin.ModelAdmin):
         if obj.used_to_date >= obj.max_uses:
             return False
         return True
-
-    is_valid.boolean = True  # type: ignore
 
 
 class RequestTokenLogAdmin(admin.ModelAdmin):
