@@ -63,12 +63,12 @@ class DecoratorTests(TestCase):
 
     def test_scope(self):
         token = RequestToken.objects.create_token(scope="foobar")
-        request = self._request("/", token.jwt(), AnonymousUser())
+        request = self._request("/", token.token, AnonymousUser())
         self.assertRaises(ScopeError, test_view_func, request)
         self.assertFalse(RequestTokenLog.objects.exists())
 
         RequestToken.objects.all().update(scope="foo")
-        request = self._request("/", token.jwt(), AnonymousUser())
+        request = self._request("/", token.token, AnonymousUser())
         response = test_view_func(request)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(RequestTokenLog.objects.exists())
@@ -77,7 +77,7 @@ class DecoratorTests(TestCase):
         """Test that CBV methods extract the request correctly."""
         cbv = TestClassBasedView()
         token = RequestToken.objects.create_token(scope="foobar")
-        request = self._request("/", token.jwt(), AnonymousUser())
+        request = self._request("/", token.token, AnonymousUser())
         response = cbv.get(request)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(int(response.content), token.id)
@@ -93,7 +93,7 @@ class DecoratorTests(TestCase):
     def test_delete_user__pass(self):
         user = User.objects.create_user("test_user")
         token = RequestToken.objects.create_token(user=user, scope="foo")
-        request = self._request("/", token.jwt(), user)
+        request = self._request("/", token.token, user)
         assert User.objects.count() == 1
 
         @use_request_token(scope="foo", log=False)
@@ -108,7 +108,7 @@ class DecoratorTests(TestCase):
     def test_delete_user__fail(self):
         user = User.objects.create_user("test_user")
         token = RequestToken.objects.create_token(user=user, scope="foo")
-        request = self._request("/", token.jwt(), user)
+        request = self._request("/", token.token, user)
 
         @use_request_token(scope="foo", log=True)
         def delete_token_user(request):

@@ -38,6 +38,7 @@ class RequestTokenTests(TestCase):
         self.assertEqual(token.login_mode, RequestToken.LOGIN_MODE_NONE)
         self.assertIsNone(token.expiration_time)
         self.assertIsNone(token.not_before_time)
+        self.assertEqual(token.token, "")
         self.assertEqual(token.data, {})
         self.assertIsNone(token.issued_at)
         self.assertEqual(token.max_uses, DEFAULT_MAX_USES)
@@ -62,7 +63,7 @@ class RequestTokenTests(TestCase):
         self.assertEqual(token.used_to_date, 0)
 
         token.issued_at = None
-        token = token.save(update_fields=["issued_at"])
+        token = token.save(update_fields=["issued_at", "token"])
         self.assertIsNone(token.issued_at)
 
         now = tz_now()
@@ -76,6 +77,14 @@ class RequestTokenTests(TestCase):
             token.save()
             self.assertEqual(token.issued_at, now)
             self.assertEqual(token.expiration_time, expires)
+
+    def test_update_token(self):
+        token = RequestToken().save()
+        self.assertEqual(token.token, "")
+        token.update_token()
+        self.assertEqual(token.token, token.jwt())
+        token.refresh_from_db()
+        self.assertEqual(token.token, token.jwt())
 
     def test_claims(self):
         token = RequestToken()
@@ -302,8 +311,8 @@ def test_tokenise(input: str, output: str) -> None:
     assert token.tokenise(input) == output.format(jwt=token.jwt())
 
 
-class RequestTokenQuerySetTests(TestCase):
-    """RequestTokenQuerySet class tests."""
+class RequestTokenManagerTests(TestCase):
+    """RequestTokenManager class tests."""
 
     def test_create_token(self):
         self.assertRaises(TypeError, RequestToken.objects.create_token)

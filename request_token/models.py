@@ -6,7 +6,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from django.conf import settings
-from django.contrib.auth import login
+from django.contrib.auth import get_user_model, login
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import JSONField
@@ -20,14 +20,20 @@ from .settings import DEFAULT_MAX_USES, JWT_QUERYSTRING_ARG, JWT_SESSION_TOKEN_E
 from .utils import encode, to_seconds
 
 logger = logging.getLogger(__name__)
+User = get_user_model()
 
 
-class RequestTokenQuerySet(models.query.QuerySet):
-    """Custom QuerySet for RquestToken objects."""
-
+class RequestTokenManager(models.Manager):
     def create_token(self, scope: str, **kwargs: Any) -> RequestToken:
-        """Create a new RequestToken."""
-        return RequestToken(scope=scope, **kwargs).save()
+        """
+        Create a new RequestToken.
+
+        This method does a double save in t
+
+        """
+        token = self.create(scope=scope, **kwargs)
+        token.update_token()
+        return token
 
 
 class RequestToken(models.Model):
@@ -95,7 +101,7 @@ class RequestToken(models.Model):
         help_text=_lazy("Label used to match request to view function in decorator."),
     )
     token = models.TextField(
-        help_text=_lazy("The encoded JWT token, set on save.")
+        help_text=_lazy("The encoded JWT token, set on save."), default=""
     )
     expiration_time = models.DateTimeField(
         blank=True,
@@ -135,7 +141,7 @@ class RequestToken(models.Model):
         ),
     )
 
-    objects = RequestTokenQuerySet.as_manager()
+    objects = RequestTokenManager()
 
     class Meta:
         verbose_name = "Token"
@@ -196,15 +202,40 @@ class RequestToken(models.Model):
         }
         if self.id is not None:
             claims["jti"] = self.id
-        if self.user is not None:
-            claims["aud"] = str(self.user.pk)
         if self.expiration_time is not None:
             claims["exp"] = to_seconds(self.expiration_time)
         if self.issued_at is not None:
             claims["iat"] = to_seconds(self.issued_at)
         if self.not_before_time is not None:
             claims["nbf"] = to_seconds(self.not_before_time)
+        try:
+            # special case - if the user has been deleted but the object
+            # still has a cached reference to it, this will raise a
+            # DoesNotExist exception. Canonical use case is deleting a
+            # user inside a decorated view.
+            if self.user is not None:
+                claims["aud"] = str(self.user.pk)
+        except User.DoesNotExist:
+            pass
         return claims
+
+    @property
+    def token_tuple(self) -> tuple[str, str, str]:
+        if not self.token:
+            raise AttributeError("Token attribute not set.")
+        return self.token.split(".")
+
+    @property
+    def token_header(self) -> str:
+        return self.token_tuple[0]
+
+    @property
+    def token_claims(self) -> str:
+        return self.token_tuple[1]
+
+    @property
+    def token_signature(self) -> str:
+        return self.token_tuple[2]
 
     def clean(self) -> None:
         """Ensure that login_mode setting is valid."""
@@ -233,7 +264,8 @@ class RequestToken(models.Model):
                     + datetime.timedelta(minutes=JWT_SESSION_TOKEN_EXPIRY)
                 )
         self.clean()
-        self.token = self.jwt()
+        if self.id:
+            self.token = self.jwt()
         super().save(*args, **kwargs)
         return self
 
@@ -247,6 +279,11 @@ class RequestToken(models.Model):
 
         """
         return encode(self.claims)
+
+    def update_token(self) -> None:
+        """Update the token property."""
+        self.token = self.jwt()
+        self.save(update_fields=["token"])
 
     @transaction.atomic
     def increment_used_count(self) -> None:

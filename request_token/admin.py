@@ -24,17 +24,14 @@ class RequestTokenAdmin(admin.ModelAdmin):
     list_display = (
         "user",
         "scope",
-        "not_before_time",
-        "expiration_time",
+        "token_signature",
         "max_uses",
         "used_to_date",
-        "issued_at",
         "is_valid",
     )
     readonly_fields = (
         "issued_at",
         "token",
-        "_parsed",
         "_claims",
         "_data",
     )
@@ -44,27 +41,17 @@ class RequestTokenAdmin(admin.ModelAdmin):
         "user__email",
         "user__username",
         "scope",
-        "token"
+        "token",
     )
     raw_id_fields = ("user",)
 
-    @admin.display(description="JWT (decoded)")
+    @admin.display(description="Token claims")
     def _claims(self, obj: RequestToken) -> str | None:
         return pretty_print(obj.claims)
 
-    @admin.display(description="Data (JSON)")
+    @admin.display(description="Token data")
     def _data(self, obj: RequestToken) -> str | None:
         return pretty_print(obj.data)
-
-    @admin.display(description="JWT (parsed)")
-    def _parsed(self, obj: RequestToken) -> str | None:
-        try:
-            jwt = obj.token.split(".")
-            return pretty_print(
-                {"header": jwt[0], "claims": jwt[1], "signature": jwt[2]}
-            )
-        except Exception:  # noqa: B902
-            return None
 
     @admin.display(boolean=True)
     def is_valid(self, obj: RequestToken) -> bool:

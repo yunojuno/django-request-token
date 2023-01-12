@@ -1,6 +1,9 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [3.0] - unreleased
+
+- Add encoded token field to RequestToken (enables admin searching)
 
 ## [2.1] - 2022-11-09
 
