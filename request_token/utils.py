@@ -8,7 +8,7 @@ from typing import Sequence
 from django.conf import settings
 from jwt import decode as jwt_decode
 from jwt import encode as jwt_encode
-from jwt import exceptions
+from jwt import exceptions, get_unverified_header
 
 # verification options - signature and expiry date
 DEFAULT_DECODE_OPTIONS = {
@@ -68,3 +68,15 @@ def to_seconds(timestamp: datetime.datetime) -> int | None:
         return calendar.timegm(timestamp.utctimetuple())
     except Exception:  # noqa: B902
         return None
+
+
+def is_jwt(jwt: str) -> bool:
+    """Return True if the value supplied is a JWT."""
+    if not jwt:
+        return False
+    try:
+        header = get_unverified_header(jwt)
+    except exceptions.DecodeError:
+        return False
+    else:
+        return header["typ"].lower() == "jwt"

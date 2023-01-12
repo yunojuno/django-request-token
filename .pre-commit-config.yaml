@@ -17,7 +17,7 @@ repos:
       - id: pyupgrade
 
   # Flake8 includes pyflakes, pycodestyle, mccabe, pydocstyle, bandit
-  - repo: https://gitlab.com/pycqa/flake8
+  - repo: https://github.com/pycqa/flake8
     rev: 3.9.2
     hooks:
       - id: flake8
