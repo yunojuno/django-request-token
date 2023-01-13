@@ -1,11 +1,12 @@
 import datetime
 
+import pytest
 from django.conf import settings
 from django.test import TestCase
 from jwt import encode as jwt_encode
 from jwt.exceptions import DecodeError, InvalidAlgorithmError, MissingRequiredClaimError
 
-from request_token.utils import MANDATORY_CLAIMS, decode, encode, to_seconds
+from request_token.utils import MANDATORY_CLAIMS, decode, encode, is_jwt, to_seconds
 
 
 class FunctionTests(TestCase):
@@ -46,3 +47,20 @@ class FunctionTests(TestCase):
         payload = {"foo": "bar"}
         encoded = jwt_encode(payload, settings.SECRET_KEY)
         self.assertRaises(InvalidAlgorithmError, decode, encoded, algorithms=["HS384"])
+
+
+@pytest.mark.parametrize(
+    "jwt,result",
+    [
+        (None, False),
+        ("", False),
+        ("123.abc.DEF", False),
+    ],
+)
+def test_is_jwt__False(jwt: str, result: bool) -> None:
+    assert is_jwt(jwt) == result
+
+
+def test_is_jwt__True() -> None:
+    encoded = jwt_encode({}, settings.SECRET_KEY)
+    assert is_jwt(encoded)

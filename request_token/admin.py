@@ -3,10 +3,14 @@ from __future__ import annotations
 import json
 
 from django.contrib import admin
+from django.db.models import QuerySet
+from django.http import HttpRequest
 from django.utils.safestring import mark_safe
 from django.utils.timezone import now as tz_now
+from jwt.exceptions import DecodeError
 
 from .models import RequestToken, RequestTokenLog
+from .utils import decode, is_jwt
 
 
 def pretty_print(data: dict | None) -> str | None:
@@ -18,6 +22,7 @@ def pretty_print(data: dict | None) -> str | None:
     return mark_safe("<pre><code>%s</code></pre>" % html)  # noqa: S703,S308
 
 
+@admin.register(RequestToken)
 class RequestTokenAdmin(admin.ModelAdmin):
     """Admin model for RequestToken objects."""
 
@@ -41,24 +46,52 @@ class RequestTokenAdmin(admin.ModelAdmin):
     )
     raw_id_fields = ("user",)
 
+    def get_search_results(
+        self, request: HttpRequest, queryset: QuerySet[RequestToken], search_term: str
+    ) -> tuple[QuerySet[RequestToken], bool]:
+        """Override search to short-circuit if a JWT is identified."""
+        if not is_jwt(search_term):
+            return super().get_search_results(request, queryset, search_term)
+        try:
+            pk = decode(search_term)["jti"]
+        except DecodeError as ex:
+            self.message_user(
+                request,
+                f"Search term interpreted as JWT - but decoding failed: {ex}",
+                "error",
+            )
+            return super().get_search_results(request, queryset, search_term)
+        queryset = RequestToken.objects.filter(pk=pk)
+        if queryset.exists():
+            self.message_user(
+                request,
+                "Search term interpreted as JWT - match found.",
+                "success",
+            )
+        else:
+            self.message_user(
+                request,
+                "Search term interpreted as JWT - no match found.",
+                "error",
+            )
+        return queryset, False
+
+    @admin.display(description="JWT (decoded)")
     def _claims(self, obj: RequestToken) -> str | None:
         return pretty_print(obj.claims)
 
-    _claims.short_description = "JWT (decoded)"  # type: ignore
-
+    @admin.display(description="Data (JSON)")
     def _data(self, obj: RequestToken) -> str | None:
         return pretty_print(obj.data)
 
-    _data.short_description = "Data (JSON)"  # type: ignore
-
+    @admin.display(description="JWT")
     def jwt(self, obj: RequestToken) -> str | None:
         try:
             return obj.jwt()
         except Exception:  # noqa: B902
             return None
 
-    jwt.short_description = "JWT"  # type: ignore
-
+    @admin.display(description="JWT (parsed)")
     def _parsed(self, obj: RequestToken) -> str | None:
         try:
             jwt = obj.jwt().split(".")
@@ -67,8 +100,6 @@ class RequestTokenAdmin(admin.ModelAdmin):
             )
         except Exception:  # noqa: B902
             return None
-
-    _parsed.short_description = "JWT (parsed)"  # type: ignore
 
     def is_valid(self, obj: RequestToken) -> bool:
         """Validate the time window and usage."""
@@ -84,6 +115,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
     is_valid.boolean = True  # type: ignore
 
 
+@admin.register(RequestTokenLog)
 class RequestTokenLogAdmin(admin.ModelAdmin):
     """Admin model for RequestTokenLog objects."""
 
@@ -91,20 +123,3 @@ class RequestTokenLogAdmin(admin.ModelAdmin):
     search_fields = ("user__first_name", "user__username")
     raw_id_fields = ("user", "token")
     list_filter = ("status_code",)
-
-
-class RequestTokenErrorLogAdmin(admin.ModelAdmin):
-    """Admin model for RequestTokenErrorLog objects."""
-
-    list_display = ("token", "log", "error_type", "error_message")
-    search_fields = (
-        "log__user__first_name",
-        "log__user__last_name",
-        "log__user__username",
-    )
-    raw_id_fields = ("token", "log")
-    list_filter = ("error_type",)
-
-
-admin.site.register(RequestToken, RequestTokenAdmin)
-admin.site.register(RequestTokenLog, RequestTokenLogAdmin)

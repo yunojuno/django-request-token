@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2] - unreleased
+
+- Add support for searching in admin by JWT [fixes #59]
+- Add suppoort for disabling logging on a per-view basis [fixes #55]
+
 ## [2.1] - 2022-11-09
 
 - Add Python 3.11 support
