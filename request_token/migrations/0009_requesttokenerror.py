@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [("request_token", "0008_convert_token_data_to_jsonfield")]
 
     operations = [

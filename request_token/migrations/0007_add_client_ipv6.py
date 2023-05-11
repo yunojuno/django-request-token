@@ -15,7 +15,6 @@ POSTGRES = (
 
 
 class Migration(migrations.Migration):
-
     dependencies = [("request_token", "0006_auto_20161104_1428")]
 
     alter_field = migrations.AlterField(

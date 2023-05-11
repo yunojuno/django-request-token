@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [("request_token", "0007_add_client_ipv6")]
 
     operations = [

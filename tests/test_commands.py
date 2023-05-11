@@ -77,5 +77,5 @@ def test_request_meta__client_ip(
         ("8.8.8.8, 123.124.125.126", "8.8.8.8"),
     ],
 )
-def test_parse_xff(input: str, output: str) -> None:
+def test_parse_xff(input: str, output: str) -> None:  # noqa: A002
     assert parse_xff(input) == output

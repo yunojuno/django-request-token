@@ -126,7 +126,6 @@ class RequestTokenTests(TestCase):
         self.assertTrue(token.data["foo"])
 
     def test_clean(self):
-
         # LOGIN_MODE_NONE doesn't care about user.
         token = RequestToken(login_mode=RequestToken.LOGIN_MODE_NONE)
         token.clean()
@@ -297,7 +296,7 @@ class RequestTokenTests(TestCase):
         ("/foo?rt=baz&q=hello#anchor", "/foo?rt={jwt}&q=hello#anchor"),
     ],
 )
-def test_tokenise(input: str, output: str) -> None:
+def test_tokenise(input: str, output: str) -> None:  # noqa: A002
     token = RequestToken(id=1, scope="foo", login_mode=RequestToken.LOGIN_MODE_NONE)
     assert token.tokenise(input) == output.format(jwt=token.jwt())
 

@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [("request_token", "0009_requesttokenerror")]
 
     operations = [

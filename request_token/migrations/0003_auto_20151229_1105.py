@@ -5,7 +5,6 @@ from ..settings import DEFAULT_MAX_USES
 
 
 class Migration(migrations.Migration):
-
     dependencies = [("request_token", "0002_auto_20151227_1428")]
 
     operations = [

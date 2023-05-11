@@ -174,7 +174,7 @@ class RequestToken(models.Model):
         return self.claims.get("jti")
 
     @property
-    def max(self) -> int:
+    def max(self) -> int:  # noqa: A003
         """Return the 'max' claim, mapped to max_uses."""
         return self.claims["max"]
 

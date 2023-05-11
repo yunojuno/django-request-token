@@ -2,7 +2,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [("request_token", "0004_remove_requesttoken_target_url")]
 
     operations = [

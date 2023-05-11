@@ -36,8 +36,7 @@ def get_timestamp_from_count(count: int) -> datetime:
 
 
 class Command(BaseCommand):
-
-    help = "Truncate request token logs."
+    help = "Truncate request token logs."  # noqa: A003
 
     def add_arguments(self, parser: ArgumentParser) -> None:
         parser.add_argument(
