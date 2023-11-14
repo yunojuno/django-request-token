@@ -68,7 +68,7 @@ def use_request_token(  # noqa: C901
         # arg is.
         request = _get_request_arg(*args)
         token: RequestToken | None = getattr(request, "token", None)
-        if not view_func:
+        if view_func is None:
             raise ValueError("Missing view_func")
 
         if token is None:

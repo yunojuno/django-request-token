@@ -2,7 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.2] - unreleased
+## [2.3] - 2023-11-14
+
+- Add Django 5.0 to build matrix
+- Add Python 3.12 to build matrix
+
+No code changes.
+
+## [2.2] - 2023-11-14
 
 - Add support for searching in admin by JWT [fixes #59]
 - Add suppoort for disabling logging on a per-view basis [fixes #55]
