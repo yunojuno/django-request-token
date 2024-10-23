@@ -107,4 +107,3 @@ class RequestTokenMiddleware:
         if isinstance(exception, InvalidTokenError):
             logger.exception("JWT request token error, raising 403")
             raise PermissionDenied("Invalid request token.")
-

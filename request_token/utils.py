@@ -1,4 +1,5 @@
 """Basic encode/decode utils, taken from PyJWT."""
+
 from __future__ import annotations
 
 import calendar

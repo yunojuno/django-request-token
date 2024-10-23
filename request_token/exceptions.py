@@ -4,6 +4,7 @@ Local exceptions related to tokens.
 These exceptions all inherit from the PyJWT base InvalidTokenError.
 
 """
+
 from __future__ import annotations
 
 from jwt.exceptions import InvalidTokenError

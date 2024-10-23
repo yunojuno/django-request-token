@@ -150,9 +150,7 @@ class MiddlewareTests(TestCase):
 
     def test_extract_ajax_token_catches_unicode_error(self):
         request = self.factory.post(
-            "/",
-            data=b"\xa0",  # Invalid UTF-8 data
-            content_type="application/json"
+            "/", data=b"\xa0", content_type="application/json"  # Invalid UTF-8 data
         )
         request.user = self.user
         request.session = MockSession()

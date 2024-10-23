@@ -7,6 +7,7 @@ max number of rows to retain, or date - so that logs are only kept for a
 period of time.
 
 """
+
 from argparse import ArgumentParser
 from datetime import datetime, timedelta
 from typing import Any
