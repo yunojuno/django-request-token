@@ -34,6 +34,9 @@ class RequestTokenMiddleware:
             payload = json.loads(request.body)
         except json.decoder.JSONDecodeError:
             return None
+        except UnicodeDecodeError:
+            return None
+
         try:
             return payload.get(JWT_QUERYSTRING_ARG)
         except AttributeError:
