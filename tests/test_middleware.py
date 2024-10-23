@@ -147,3 +147,16 @@ class MiddlewareTests(TestCase):
         request = self.post_request_with_JSON(self.default_payload)
         middleware = RequestTokenMiddleware(lambda r: HttpResponse())
         self.assertEqual(middleware.extract_ajax_token(request), self.token.jwt())
+
+    def test_extract_ajax_token_catches_unicode_error(self):
+        request = self.factory.post(
+            "/",
+            data=b"\xa0",  # Invalid UTF-8 data
+            content_type="application/json"
+        )
+        request.user = self.user
+        request.session = MockSession()
+
+        middleware = RequestTokenMiddleware(get_response=lambda r: HttpResponse())
+        result = middleware.extract_ajax_token(request)
+        self.assertIsNone(result)

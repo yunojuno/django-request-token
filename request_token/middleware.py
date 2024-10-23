@@ -34,6 +34,9 @@ class RequestTokenMiddleware:
             payload = json.loads(request.body)
         except json.decoder.JSONDecodeError:
             return None
+        except UnicodeDecodeError:
+            return None
+
         try:
             return payload.get(JWT_QUERYSTRING_ARG)
         except AttributeError:
@@ -104,3 +107,4 @@ class RequestTokenMiddleware:
         if isinstance(exception, InvalidTokenError):
             logger.exception("JWT request token error, raising 403")
             raise PermissionDenied("Invalid request token.")
+
