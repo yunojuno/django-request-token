@@ -169,7 +169,7 @@ class RequestToken(models.Model):
         return self.claims.get("iat")
 
     @property
-    def jti(self) -> int | None:
+    def jti(self) -> str | None:
         """Return the 'jti' claim, mapped to id."""
         return self.claims.get("jti")
 
@@ -192,7 +192,7 @@ class RequestToken(models.Model):
             "mod": self.login_mode[:1].lower(),
         }
         if self.id is not None:
-            claims["jti"] = self.id
+            claims["jti"] = str(self.id)
         if self.user is not None:
             claims["aud"] = str(self.user.pk)
         if self.expiration_time is not None:

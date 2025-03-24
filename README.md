@@ -187,7 +187,7 @@ following JWT claims (available as the property `RequestToken.claims`:
 * `max`: maximum times the token can be used
 * `sub`: the scope
 * `mod`: the login mode
-* `jti`: the token id
+* `jti`: the token id (str, as [pyjwt >= 2.10](https://github.com/jpadilla/pyjwt/releases/tag/2.10.0) now validates as a string)
 * `aud`: (optional) the user the token represents
 * `exp`: (optional) the expiration time of the token
 * `iat`: (optional) the time the token was issued
