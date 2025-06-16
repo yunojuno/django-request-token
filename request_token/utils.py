@@ -70,7 +70,7 @@ def to_seconds(timestamp: datetime.datetime) -> int | None:
     """Convert timestamp into integers since epoch."""
     try:
         return calendar.timegm(timestamp.utctimetuple())
-    except Exception:  # noqa: B902
+    except Exception:  # noqa: BLE001
         return None
 
 
