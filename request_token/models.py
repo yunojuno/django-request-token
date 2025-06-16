@@ -171,7 +171,8 @@ class RequestToken(models.Model):
     @property
     def jti(self) -> int | None:
         """Return the 'jti' claim, mapped to id."""
-        return self.claims.get("jti")
+        jti_value = self.claims.get("jti")
+        return int(jti_value) if jti_value is not None else None
 
     @property
     def max(self) -> int:  # noqa: A003
@@ -192,7 +193,7 @@ class RequestToken(models.Model):
             "mod": self.login_mode[:1].lower(),
         }
         if self.id is not None:
-            claims["jti"] = self.id
+            claims["jti"] = str(self.id)
         if self.user is not None:
             claims["aud"] = str(self.user.pk)
         if self.expiration_time is not None:

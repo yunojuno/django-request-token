@@ -53,7 +53,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
         if not is_jwt(search_term):
             return super().get_search_results(request, queryset, search_term)
         try:
-            pk = decode(search_term)["jti"]
+            pk = int(decode(search_term)["jti"])
         except DecodeError as ex:
             self.message_user(
                 request,
