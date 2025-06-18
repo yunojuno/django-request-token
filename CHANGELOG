@@ -2,42 +2,51 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.0] - 2025-06-18
+
+-   Add Django 5.1 and 5.2 support
+-   Add Python 3.13 support
+-   Drop support for Django < 4.2 (Django 3.2, 4.0, 4.1)
+-   Updated minimum Python version requirement to 3.10
+-   Updated ruff configuration to use modern syntax
+-   Update GitHub workflows to test Django main branch only with Python 3.12+
+
 ## [2.3.1] - 2024-10-23
 
-- Catch UnicodeDecodeError in middleware [fixes #61]
+-   Catch UnicodeDecodeError in middleware [fixes #61]
 
 ## [2.3] - 2023-11-14
 
-- Add Django 5.0 to build matrix
-- Add Python 3.12 to build matrix
+-   Add Django 5.0 to build matrix
+-   Add Python 3.12 to build matrix
 
 No code changes.
 
 ## [2.2] - 2023-11-14
 
-- Add support for searching in admin by JWT [fixes #59]
-- Add support for disabling logging on a per-view basis [fixes #55]
+-   Add support for searching in admin by JWT [fixes #59]
+-   Add support for disabling logging on a per-view basis [fixes #55]
 
 ## [2.1] - 2022-11-09
 
-- Add Python 3.11 support
+-   Add Python 3.11 support
 
 ## [1.0] - 2022-02-07
 
-- Add Django 4.0 and Python 3.10 support
-- Add `RequestToken.tokenise` method
+-   Add Django 4.0 and Python 3.10 support
+-   Add `RequestToken.tokenise` method
 
 ## [0.15] - 2021-06-24
 
-- Add support for non-default user PK fields (e.g. uuid) - thanks @timomeara
-- Add `increment_used_count` method.
+-   Add support for non-default user PK fields (e.g. uuid) - thanks @timomeara
+-   Add `increment_used_count` method.
 
 ## [0.14] - 2021-04-14
 
 ### Removed
 
-- Logging of token use errors - this has never worked
-- Custom 403_TEMPLATE use (and setting)
+-   Logging of token use errors - this has never worked
+-   Custom 403_TEMPLATE use (and setting)
 
 ## [0.12] - 2020-08-17
 
