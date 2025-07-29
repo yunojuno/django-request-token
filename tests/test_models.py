@@ -116,7 +116,7 @@ class RequestTokenTests(TestCase):
         with mock.patch("request_token.models.tz_now", lambda: now):
             token.save()
             self.assertEqual(token.iat, now_sec)
-            self.assertEqual(token.jti, token.id)
+            self.assertEqual(token.jti, str(token.id))
             self.assertEqual(len(token.claims), 8)
 
     def test_json(self):
