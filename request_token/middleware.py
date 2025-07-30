@@ -90,7 +90,7 @@ class RequestTokenMiddleware:
         # no longer exists, may not invalidate the request itself.
         try:
             payload = decode(token)
-            request.token = RequestToken.objects.get(id=payload["jti"])
+            request.token = RequestToken.objects.get(id=int(payload["jti"]))
         except RequestToken.DoesNotExist:
             request.token = None
             logger.exception("RequestToken no longer exists: %s", payload["jti"])

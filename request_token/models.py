@@ -171,7 +171,8 @@ class RequestToken(models.Model):
     @property
     def jti(self) -> str | None:
         """Return the 'jti' claim, mapped to id."""
-        return self.claims.get("jti")
+        jti_value = self.claims.get("jti")
+        return str(jti_value) if jti_value is not None else None
 
     @property
     def max(self) -> int:  # noqa: A003

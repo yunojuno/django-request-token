@@ -10,7 +10,7 @@ from request_token.settings import JWT_QUERYSTRING_ARG
 
 
 @use_request_token(scope="foo")
-def test_view_func(request):
+def sample_view_func(request):
     """Return decorated request / response objects."""
     response = HttpResponse("Hello, world!", status=200)
     return response
@@ -49,27 +49,27 @@ class DecoratorTests(TestCase):
 
     def test_no_token(self):
         request = self._request("/", None, AnonymousUser())
-        response = test_view_func(request)
+        response = sample_view_func(request)
         self.assertEqual(response.status_code, 200)
         self.assertFalse(hasattr(request, "token"))
         self.assertFalse(RequestTokenLog.objects.exists())
 
         # now force a TokenNotFoundError, by requiring it in the decorator
         @use_request_token(scope="foo", required=True)
-        def test_view_func2(request):
+        def sample_view_func2(request):
             pass
 
-        self.assertRaises(TokenNotFoundError, test_view_func2, request)
+        self.assertRaises(TokenNotFoundError, sample_view_func2, request)
 
     def test_scope(self):
         token = RequestToken.objects.create_token(scope="foobar")
         request = self._request("/", token.jwt(), AnonymousUser())
-        self.assertRaises(ScopeError, test_view_func, request)
+        self.assertRaises(ScopeError, sample_view_func, request)
         self.assertFalse(RequestTokenLog.objects.exists())
 
         RequestToken.objects.all().update(scope="foo")
         request = self._request("/", token.jwt(), AnonymousUser())
-        response = test_view_func(request)
+        response = sample_view_func(request)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(RequestTokenLog.objects.exists())
 

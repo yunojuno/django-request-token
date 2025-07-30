@@ -19,7 +19,7 @@ def pretty_print(data: dict | None) -> str | None:
         return None
     pretty = json.dumps(data, sort_keys=True, indent=4, separators=(",", ": "))
     html = pretty.replace(" ", "&nbsp;").replace("\n", "<br>")
-    return mark_safe("<pre><code>%s</code></pre>" % html)  # noqa: S703,S308
+    return mark_safe("<pre><code>%s</code></pre>" % html)  # noqa: S308
 
 
 @admin.register(RequestToken)
@@ -53,7 +53,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
         if not is_jwt(search_term):
             return super().get_search_results(request, queryset, search_term)
         try:
-            pk = decode(search_term)["jti"]
+            pk = int(decode(search_term)["jti"])
         except DecodeError as ex:
             self.message_user(
                 request,
@@ -88,7 +88,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
     def jwt(self, obj: RequestToken) -> str | None:
         try:
             return obj.jwt()
-        except Exception:  # noqa: B902
+        except Exception:  # noqa: BLE001
             return None
 
     @admin.display(description="JWT (parsed)")
@@ -98,7 +98,7 @@ class RequestTokenAdmin(admin.ModelAdmin):
             return pretty_print(
                 {"header": jwt[0], "claims": jwt[1], "signature": jwt[2]}
             )
-        except Exception:  # noqa: B902
+        except Exception:  # noqa: BLE001
             return None
 
     def is_valid(self, obj: RequestToken) -> bool:
