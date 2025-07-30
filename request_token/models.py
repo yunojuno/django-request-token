@@ -169,7 +169,7 @@ class RequestToken(models.Model):
         return self.claims.get("iat")
 
     @property
-    def jti(self) -> int | None:
+    def jti(self) -> str | None:
         """Return the 'jti' claim, mapped to id."""
         jti_value = self.claims.get("jti")
         return int(jti_value) if jti_value is not None else None

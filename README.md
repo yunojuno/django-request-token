@@ -173,11 +173,12 @@ website. The token produced will include the following JWT claims (available as 
 -   `max`: maximum times the token can be used
 -   `sub`: the scope
 -   `mod`: the login mode
--   `jti`: the token id
+-   `jti`: the token id (str)
 -   `aud`: (optional) the user the token represents
 -   `exp`: (optional) the expiration time of the token
 -   `iat`: (optional) the time the token was issued
 -   `ndf`: (optional) the not-before-time of the token
+
 
 **request_token.models.RequestTokenLog** - stores usage data for tokens
 
