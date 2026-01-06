@@ -1,7 +1,6 @@
 ## Supported versions
 
-This project supports Django 4.2+ and Python 3.10+. The latest version supported is Django 5.2
-running on Python 3.13.
+This project supports Python 3.12+ and Django 5.2-6.0.
 
 ## Django Request Token
 
