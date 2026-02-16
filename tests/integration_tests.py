@@ -12,7 +12,7 @@ from request_token.templatetags.request_token_tags import request_token
 
 def get_url(url_name, token):
     """Helper to format urls with tokens."""
-    url = reverse("test_app:%s" % url_name)
+    url = reverse(url_name)
     if token:
         url += "?{}={}".format(JWT_QUERYSTRING_ARG, token.jwt())
     return url
@@ -30,6 +30,12 @@ class ViewTests(TransactionTestCase):
     def setUp(self):
         self.client = Client()
         self.user = get_user_model().objects.create_user("zoidberg")
+
+    def test_required_token__missing(self):
+        """Test that a required token view returns 403 when no token is provided."""
+        response = self.client.get(reverse("decorated"))
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(RequestTokenLog.objects.count(), 0)
 
     def test_request_token(self):
         """Test the request tokens only set the user for a single request."""

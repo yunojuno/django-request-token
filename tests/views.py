@@ -10,14 +10,14 @@ def undecorated(request):
     return response
 
 
-@use_request_token(scope="foo", required=False)
+@use_request_token(scope="foo", required=True)
 def decorated(request):
     response = HttpResponse("Hello, %s" % request.user)
     response.request_user = request.user
     return response
 
 
-@use_request_token(scope="bar", required=False)
+@use_request_token(scope="bar", required=True)
 def roundtrip(request):
     if request.method == "GET":
         return render(request, "test_form.html")
