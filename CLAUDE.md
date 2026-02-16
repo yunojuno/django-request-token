@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 django-request-token is a Django app that provides JWT-backed tokens for managing one-time/expiring URL access. It supports three login modes: NONE (public link), REQUEST (single-request auth), and SESSION (full session login). Built on PyJWT, it uses Django's SECRET_KEY for signing.
 
-**Requirements:** Python 3.12+, Django 5.2–6.0, PyJWT 2.0+
+**Requirements:** Python 3.12+, Django 5.2–6.0, PyJWT 2.11+
 
 ## Common Commands
 

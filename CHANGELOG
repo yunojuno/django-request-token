@@ -24,6 +24,11 @@ All notable changes to this project will be documented in this file.
     time, so any missing argument will be caught in local dev or CI
     before reaching production.
 
+### Dependencies
+
+-   Minimum PyJWT version bumped from 2.0 to 2.11 (for `jwt.types.Options`
+    TypedDict used in type annotations).
+
 ### Migration
 
 Replace all bare usages:

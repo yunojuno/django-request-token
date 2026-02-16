@@ -23,7 +23,7 @@ packages = [{ include = "request_token" }]
 [tool.poetry.dependencies]
 python = "^3.12"
 django = ">=5.2,<7.0"
-pyjwt = "^2.0"
+pyjwt = "^2.11"
 
 [tool.poetry.group.dev.dependencies]
 coverage = "*"
