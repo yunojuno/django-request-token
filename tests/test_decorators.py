@@ -47,6 +47,23 @@ class DecoratorTests(TestCase):
         self.middleware(request)
         return request
 
+    def test_missing_scope(self):
+        with self.assertRaises(ValueError):
+            @use_request_token(scope="", required=True)
+            def view(request):
+                pass
+
+        with self.assertRaises(ValueError):
+            @use_request_token(scope=None, required=True)
+            def view(request):
+                pass
+
+    def test_missing_required(self):
+        with self.assertRaises(TypeError):
+            @use_request_token(scope="foo")
+            def view(request):
+                pass
+
     def test_no_token__required(self):
         request = self._request("/", None, AnonymousUser())
         self.assertRaises(TokenNotFoundError, sample_view_func, request)
