@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.urls import path
 from django.views import debug
 
-from .views import decorated, roundtrip, undecorated
+from .views import decorated, optional, roundtrip, undecorated
 
 app_name = "tests"
 
@@ -12,6 +12,7 @@ urlpatterns = [
     path("", debug.default_urlconf),
     path("admin/", admin.site.urls),
     path("decorated/", decorated, name="decorated"),
+    path("optional/", optional, name="optional"),
     path("roundtrip/", roundtrip, name="roundtrip"),
     path("undecorated/", undecorated, name="undecorated"),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

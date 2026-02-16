@@ -37,6 +37,26 @@ class ViewTests(TransactionTestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(RequestTokenLog.objects.count(), 0)
 
+    def test_optional_token__without_token(self):
+        """Test that an optional token view passes through without a token."""
+        response = self.client.get(reverse("optional"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.request_user, AnonymousUser)
+        self.assertEqual(RequestTokenLog.objects.count(), 0)
+
+    def test_optional_token__with_token(self):
+        """Test that an optional token view validates and logs a provided token."""
+        token = RequestToken.objects.create_token(
+            scope="foo",
+            max_uses=10,
+            user=self.user,
+            login_mode=RequestToken.LOGIN_MODE_REQUEST,
+        )
+        response = self.client.get(get_url("optional", token))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.request_user, self.user)
+        self.assertEqual(RequestTokenLog.objects.count(), 1)
+
     def test_request_token(self):
         """Test the request tokens only set the user for a single request."""
         token = RequestToken.objects.create_token(

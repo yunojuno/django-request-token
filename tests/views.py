@@ -17,6 +17,13 @@ def decorated(request):
     return response
 
 
+@use_request_token(scope="foo", required=False)
+def optional(request):
+    response = HttpResponse("Hello, %s" % request.user)
+    response.request_user = request.user
+    return response
+
+
 @use_request_token(scope="bar", required=True)
 def roundtrip(request):
     if request.method == "GET":
