@@ -48,9 +48,9 @@ request token support afterwards.
 This project supports three core use cases, each of which is modelled using the `login_mode`
 attribute of a request token:
 
-1. ~~Single authenticated request~~ (DEPRECATED: use `django-visitor-pass`)
+1. Single authenticated request (but you may prefer [django-visitor-pass](https://github.com/yunojuno/django-visitor-pass))
 2. Public link with payload
-3. ~~Auto-login~~ (DEPRECATED: use `django-magic-link`)
+3. Auto-login (but you may prefer [django-magic-link](https://github.com/yunojuno/django-magic-link))
 
 **Single Request** (`RequestToken.LOGIN_MODE_REQUEST`)
 
