@@ -13,18 +13,16 @@ from jwt import (
     exceptions,
     get_unverified_header,
 )
+from jwt.types import Options
 
 # verification options - signature and expiry date
-DEFAULT_DECODE_OPTIONS = {
+DEFAULT_DECODE_OPTIONS: Options = {
     "verify_signature": True,
     "verify_exp": True,
     "verify_nbf": True,
     "verify_iat": True,
     "verify_aud": False,
-    "verify_iss": False,  # we're only validating our own claims
-    "require_exp": False,
-    "require_iat": False,
-    "require_nbf": False,
+    "verify_iss": False,
 }
 
 MANDATORY_CLAIMS = ("jti", "sub", "mod")
@@ -47,7 +45,7 @@ def encode(payload: dict, check_claims: Sequence[str] = MANDATORY_CLAIMS) -> str
 
 def decode(
     token: str,
-    options: dict[str, bool] | None = None,
+    options: Options | None = None,
     check_claims: Sequence[str] | None = None,
     algorithms: list[str] | None = None,
 ) -> dict:

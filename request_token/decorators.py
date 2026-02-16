@@ -23,8 +23,9 @@ def _get_request_arg(*args: Any) -> HttpRequest | None:
 
 def use_request_token(  # noqa: C901
     view_func: Callable | None = None,
+    *,
     scope: str | None = None,
-    required: bool = False,
+    required: bool,
     log: bool = True,
 ) -> Callable:
     """
@@ -39,9 +40,9 @@ def use_request_token(  # noqa: C901
     using the 'scope' kwarg - the scope must be provided, and must match the
     scope of the request token.
 
-    If the 'required' kwarg is True, then the view function expects a valid token
-    in all cases - and the decorator will raise TokenNotFoundError if one does
-    not exist.
+    The 'required' kwarg is mandatory. If True, the view function expects a
+    valid token in all cases - and the decorator will raise TokenNotFoundError
+    if one does not exist. If False, requests without a token are passed through.
 
     If the 'log' kwargs is False then the usage is not logged.
 

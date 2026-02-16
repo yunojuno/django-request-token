@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-request-token"
-version = "2.4.0"
+version = "3.0.0"
 description = "JWT-backed Django app for managing querystring tokens."
 license = "MIT"
 authors = ["YunoJuno <code@yunojuno.com>"]
@@ -23,7 +23,7 @@ packages = [{ include = "request_token" }]
 [tool.poetry.dependencies]
 python = "^3.12"
 django = ">=5.2,<7.0"
-pyjwt = "^2.0"
+pyjwt = "^2.11"
 
 [tool.poetry.group.dev.dependencies]
 coverage = "*"

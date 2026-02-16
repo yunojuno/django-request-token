@@ -48,9 +48,33 @@ request token support afterwards.
 This project supports three core use cases, each of which is modelled using the `login_mode`
 attribute of a request token:
 
-1. Public link with payload
-2. ~~Single authenticated request~~ (DEPRECATED: use `django-visitor-pass`)
-3. ~~Auto-login~~ (DEPRECATED: use `django-magic-link`)
+1. Single authenticated request (but you may prefer [django-visitor-pass](https://github.com/yunojuno/django-visitor-pass))
+2. Public link with payload
+3. Auto-login (but you may prefer [django-magic-link](https://github.com/yunojuno/django-magic-link))
+
+**Single Request** (`RequestToken.LOGIN_MODE_REQUEST`)
+
+In Request mode, the request.user property is overridden by the user specified in the token, but
+only for a single request. This is useful for responding to a single action (e.g. RSVP,
+unsubscribe). If the user then navigates onto another page on the site, they will not be
+authenticated. If the user is already authenticated, but as a different user to the one in the
+token, then they will receive a 403 response.
+
+```python
+# this token will identify the request.user as a given user, but only for
+# a single request - not the entire session.
+token = RequestToken.objects.create_token(
+    scope="foo",
+    login_mode=RequestToken.LOGIN_MODE_REQUEST,
+    user=User.objects.get(username="hugo")
+)
+
+...
+
+@use_request_token(scope="foo", required=True)
+function view_func(request):
+    assert request.user == User.objects.get(username="hugo")
+```
 
 **Public Link** (`RequestToken.LOGIN_MODE_NONE`)
 
@@ -73,7 +97,7 @@ token = RequestToken.objects.create_token(
 
 ...
 
-@use_request_token(scope="foo")
+@use_request_token(scope="foo", required=False)
 function view_func(request):
     # extract the affiliate id from an token _if_ one is supplied
     affiliate_id = (
@@ -81,30 +105,6 @@ function view_func(request):
         if hasattr(request, 'token')
         else None
     )
-```
-
-**Single Request** (`RequestToken.LOGIN_MODE_REQUEST`)
-
-In Request mode, the request.user property is overridden by the user specified in the token, but
-only for a single request. This is useful for responding to a single action (e.g. RSVP,
-unsubscribe). If the user then navigates onto another page on the site, they will not be
-authenticated. If the user is already authenticated, but as a different user to the one in the
-token, then they will receive a 403 response.
-
-```python
-# this token will identify the request.user as a given user, but only for
-# a single request - not the entire session.
-token = RequestToken.objects.create_token(
-    scope="foo",
-    login_mode=RequestToken.LOGIN_MODE_REQUEST,
-    user=User.objects.get(username="hugo")
-)
-
-...
-
-@use_request_token(scope="foo")
-function view_func(request):
-    assert request.user == User.objects.get(username="hugo")
 ```
 
 **Auto-login** (`RequestToken.LOGIN_MODE_SESSION`)
@@ -143,12 +143,12 @@ function being called - i.e. the `token.scope` must match the function decorator
 token = RequestToken(scope="foo")
 
 # this will raise a 403 without even calling the function
-@use_request_token(scope="bar")
+@use_request_token(scope="bar", required=False)
 def incorrect_scope(request):
     pass
 
 # this will call the function as expected
-@use_request_token(scope="foo")
+@use_request_token(scope="foo", required=False)
 def correct_scope(request):
     pass
 ```
@@ -203,12 +203,13 @@ If the token cannot be verified it returns a 403.
 
 **request_token.decorators.use_request_token** - applies token permissions to views
 
-A function decorator that takes one mandatory kwargs (`scope`) and one optional kwargs (`required`).
+A function decorator that takes two mandatory kwargs (`scope` and `required`).
 The `scope` is used to match tokens to view functions - it's just a straight text match - the value
 can be anything you like, but if the token scope is 'foo', then the corresponding view function
 decorator scope must match. The `required` kwarg is used to indicate whether the view **must** have
-a token in order to be used, or not. This defaults to False - if a token **is** provided, then it
-will be validated, if not, the view function is called as is.
+a token in order to be used, or not. If `required=True` and no token is provided, a 403 is returned.
+If `required=False` and a token **is** provided it will be validated; if not, the view function is
+called as is.
 
 If the scopes do not match then a 403 is returned.
 
@@ -266,7 +267,7 @@ You now have a request token enabled URL. You can use this token to protect a vi
 the view decorator:
 
 ```python
-@use_request_token(scope="foo")
+@use_request_token(scope="foo", required=True)
 function foo(request):
     pass
 ```
