@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-request-token"
-version = "2.4.0"
+version = "3.0.0"
 description = "JWT-backed Django app for managing querystring tokens."
 license = "MIT"
 authors = ["YunoJuno <code@yunojuno.com>"]

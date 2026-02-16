@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.0] - 2026-02-16
+
+### Breaking Changes
+
+-   The `required` parameter on `@use_request_token` is now mandatory.
+    Previously it defaulted to `False`, which meant decorating a view
+    with `@use_request_token(scope="foo")` provided no access control
+    at all — requests without a token were silently passed through.
+
+    This was a security footgun: developers reasonably expected that
+    adding the decorator would enforce token presence, but it didn't.
+
+    We chose to make `required` mandatory rather than simply flipping the
+    default to `True` because a silent default change could break existing
+    views that intentionally allow token-less requests. Making it mandatory
+    forces every call site to be reviewed and explicitly opt in or out.
+
+    You must now explicitly pass `required=True` or `required=False`
+    on every call site. Omitting it raises `TypeError` at import/startup
+    time, so any missing argument will be caught in local dev or CI
+    before reaching production.
+
+### Migration
+
+Replace all bare usages:
+
+```python
+# Before
+@use_request_token(scope="foo")
+
+# After — choose one:
+@use_request_token(scope="foo", required=True)   # token must be present
+@use_request_token(scope="foo", required=False)  # token optional (old default)
+```
+
 ## [2.4.0] - 2025-06-18
 
 -   Add Django 5.1 and 5.2 support
